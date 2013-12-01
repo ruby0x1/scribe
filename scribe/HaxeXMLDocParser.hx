@@ -46,6 +46,8 @@ typedef ClassDoc = {
     var ispublic : Bool;
 
     var meta : Map<String, Dynamic>;
+    var extend : Array<String>;
+    var implement : Array<String>;
     var members : Map<String, MemberDoc>;
     var methods : Map<String, MethodDoc>;
     var properties : Map<String, PropertyDoc>;
@@ -124,6 +126,8 @@ class HaxeXMLDocParser {
         var _properties = new Map<String, PropertyDoc>();
         var _unknowns = new Map<String, UnknownDoc>();
         var _meta = new Map<String, Dynamic>();
+        var _extends = new Array<String>();
+        var _implements = new Array<String>();
         var _meta_tags = _class.elementsNamed('meta');
 
         var _isprivate : Bool = (_class.get('private') != null);
@@ -138,33 +142,88 @@ class HaxeXMLDocParser {
                 //for reusing the name
             var _member_name = _member.nodeName;
 
-                //we use these to determine the type
-            var _set = _member.get('set');
-            var _get = _member.get('get');
+            if(_member_name == 'extends') {
+                var _base = _member.get('path');
+                
+                var _type_params = _member.elements();                
+                if(_type_params.hasNext()) {
+                    var _types = '<';
+                    for(_param in _type_params) {
+                        if(_param.nodeName != 'd') {
+                            _types += _param.get('path') + ',';
+                        } else {
+                            _types += 'Dynamic,';
+                        }
+                    }
+                    _types = _types.substring(0, _types.length-1);
+                    _types += '>';
 
-                //without any set/get, it is a regular variable
-            if(_set == null && _get == null) {
-                    //store in the member list
-                _members.set( _member_name, parse_member(_member, config) );
+                    _extends.push(_base + _types);
+                } else {
+                    _extends.push(_base);
+                }
+
             } else 
-                //with "method" it is a function
-            if(_set == 'method') {
-                    //store in the method list
-                _methods.set( _member_name, parse_method(_member, config) );
-            } else 
-                //this is a property 
-            if(_set == 'accessor' || _get == 'accessor' ) {
-                    //store in the properties list
-                _properties.set( _member_name, parse_property(_member, config) );
-            } 
-                //any unknowns 
-            else {
-                _unknowns.set( _member_name, parse_unknown(_member, config) );
-            }
+            if(_member_name == 'implements') {
+
+                 var _base = _member.get('path');                    
+
+                var _type_params = _member.elements();                
+                if(_type_params.hasNext()) {
+                    var _types = '<';
+                    for(_param in _type_params) {
+                        if(_param.nodeName != 'd') {
+                            _types += _param.get('path') + ',';
+                        } else {
+                            _types += 'Dynamic,';
+                        }
+                    }
+                    _types = _types.substring(0, _types.length-1);
+                    _types += '>';
+
+                    _implements.push(_base + _types);
+                } else {
+                    _implements.push(_base);
+                }
+
+            } else {
+                    //we use these to determine the type
+                var _set = _member.get('set');
+                var _get = _member.get('get');
+
+                    //without any set/get, it is a regular variable
+                if(_set == null && _get == null) {
+                        //store in the member list
+                    _members.set( _member_name, parse_member(_member, config) );
+                } else 
+                    //with "method" it is a function
+                if(_set == 'method') {
+                        //store in the method list
+                    _methods.set( _member_name, parse_method(_member, config) );
+                } else 
+                    //this is a property 
+                if(_set == 'accessor' || _get == 'accessor' ) {
+                        //store in the properties list
+                    _properties.set( _member_name, parse_property(_member, config) );
+                } 
+                    //any unknowns 
+                else {
+                    _unknowns.set( _member_name, parse_unknown(_member, config) );
+                }
+            } //not specifically parsed            
 
         } //for each element in the class
 
-        return { name:_class.get('path'), meta:_meta, members:_members, methods:_methods, properties:_properties, ispublic:!_isprivate };
+        return { 
+            name:_class.get('path'), 
+            meta:_meta, 
+            extend:_extends, 
+            implement:_implements, 
+            members:_members,
+            methods:_methods,
+            properties:_properties, 
+            ispublic:!_isprivate 
+        };
 
     } //parse_class
 
@@ -188,7 +247,31 @@ class HaxeXMLDocParser {
                 var _membertype = 'Dynamic';
                 if(_type_node != null) {
                     var _thetype = _type_node.get('path');
-                    if(_thetype != null) _membertype = _thetype;
+                    if(_thetype != null) {
+                        
+                            //Type Parameter types have child elements
+                        var _type_params = _type_node.elements();
+                        var _has_type_params = _type_params.hasNext();
+                        if(_has_type_params) {
+                                //for each child element, append it
+                            var _member_type_params = '<';
+                            for(_type_param in _type_params) {
+                                if(_type_param.nodeName != 'd') {
+                                    _member_type_params += _type_param.get('path') + ',';
+                                } else {
+                                    _member_type_params += 'Dynamic,';
+                                }
+                            }
+                            _member_type_params = _member_type_params.substring(0, _member_type_params.length-1);
+                            _member_type_params += '>';
+
+                            _membertype = _thetype + _member_type_params;
+
+                        } else {
+                            _membertype = _thetype;
+                        }
+                    } //!= null
+
                 }
 
                     //store 

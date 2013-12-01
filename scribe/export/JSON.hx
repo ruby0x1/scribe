@@ -42,6 +42,32 @@ class JSON {
 		export_json = insert(export_json, '{ "name": "'+ _class.name +'",', tab_depth);
 			tab_depth++;
 
+				export_json = insert(export_json, '"extends":[', tab_depth);
+					tab_depth++;
+
+							//for each member
+						var _extends_count = _class.extend.length;
+						var _current_extend = 0;
+						for(_extend in _class.extend) {
+							_current_extend++;
+							export_json = push_extend(export_json, _extend, tab_depth, _current_extend, _extends_count);
+						}
+
+					tab_depth--;
+				export_json = insert(export_json, '],', tab_depth);
+				export_json = insert(export_json, '"implements":[', tab_depth);
+					tab_depth++;
+
+							//for each member
+						var _implements_count = _class.implement.length;
+						var _current_implement = 0;
+						for(_implement in _class.implement) {
+							_current_implement++;
+							export_json = push_implement(export_json, _implement, tab_depth, _current_extend, _implements_count);
+						}
+
+					tab_depth--;
+				export_json = insert(export_json, '],', tab_depth);
 				export_json = insert(export_json, '"members":[', tab_depth);
 					tab_depth++;
 
@@ -85,6 +111,15 @@ class JSON {
 			tab_depth--;
 		export_json = insert(export_json, '}' + ((_c != _t) ? ',' : ''), tab_depth);
 
+		return export_json;
+	}
+
+	static function push_extend(export_json:String, _extend:String, tab_depth:Int, _c:Int, _t:Int ) {
+		export_json = insert(export_json, '{ "name":"'+_extend+'" }' + ((_c != _t) ? ',' : ''), tab_depth);
+		return export_json;
+	}
+	static function push_implement(export_json:String, _implement:String, tab_depth:Int, _c:Int, _t:Int ) {
+		export_json = insert(export_json, '{ "name":"'+_implement+'" }' + ((_c != _t) ? ',' : ''), tab_depth);
 		return export_json;
 	}
 
