@@ -38,16 +38,41 @@ See example_output.json for an example class output from the current version.
 
 ###Usage
 ---
-**WIP***   
-The library is brand new, see the roadmap below for goals. 
+Note the library is WIP (see roadmap) but is usable already.
+
+	usage : 
+	  scribe <options>
+
+	options list :
+	  generate, config, version
+
+	options :
+
+	  --generate <optional output file>
+	      generate an output file, specified in config.output or 
+	      specified as an optional output file argument.
+
+	  --display
+	      if display is set and generate is set, output will be 
+	      printed to stdout instead of saved to the file.
+
+	  --version
+	      displays the version number
+
+	  --config config.json
+	      when run without this flag, scribe will look for a scribe.json in the same folder.
+
+	  --input haxedoc.xml
+	      generate documentation from this file (config.input)
+
 
 ---
 ###Roadmap
-- finish command line args implementation
-- convert output in such a way multiple types can be added (custom output formats)
-- make the API includable as a haxelib
-- submit to haxelib
-- properly document features and make per-platform binaries
+
+- support different export options (some form of plugin or similar)
+- be able to specify a haxe project build file or arguments to haxe, to directly feed from the doc generator
+- make per-platform binaries
+- submit to haxelib with run script
 
 ---
 License : MIT
