@@ -77,7 +77,6 @@ class HaxeXMLDocParser {
 
         var _classnames : Array<String> = [];
         var _classes : Map<String, ClassDoc> = new Map<String,ClassDoc>();
-        var _start_time = haxe.Timer.stamp();
 
         for(_class in root.elementsNamed('class')) {
 
@@ -111,9 +110,7 @@ class HaxeXMLDocParser {
                 _classes.set( _package, parse_class( _class, config ) );
             }
 
-        } //for each class
-
-        Sys.println( haxe.Timer.stamp() - _start_time );
+        } //for each class        
 
         return { classnames:_classnames, classes:_classes };
 

@@ -9,7 +9,7 @@ import scribe.HaxeXMLDocParser.Argument;
 
 class JSON {
 
-	public static function export( haxedoc:HaxeDoc, path:String ) {
+	public static function format( haxedoc:HaxeDoc ) {
 
 		var export_json = '';
 
@@ -33,8 +33,7 @@ class JSON {
 			tab_depth--;
 		export_json = insert(export_json, '}', tab_depth );
 
-			//write down
-		scribe.Utils.save_file( path, export_json );
+		return export_json;
 	}
 
 	static function push_class(export_json:String, _class:ClassDoc, tab_depth:Int, _c:Int, _t:Int ) {

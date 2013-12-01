@@ -1,1 +1,1 @@
-{ "input":"docs.xml", "output":"docs.json", "allowed_packages":"luxe.utils.GeometryUtils" }
+{ "input":"docs.xml", "output":"docs.json", "force":true, "allowed_packages":"luxe.utils.GeometryUtils" }
