@@ -344,8 +344,27 @@ class HaxeXMLDocParser {
                     //if it's a function, there is a more complex approac hander
                 _arg_types.push( parse_internal_function_type(_arg_info) );
             } else {
-                    //all others just store the type that it is from
-                _arg_types.push( _arg_info.get('path') );
+                    
+                    //Type Parameter types have child elements
+                var _type_params = _arg_info.elements();
+                var _has_type_params = _type_params.hasNext();
+                if(_has_type_params) {
+                        //for each child element, append it
+                    var _arg_type_params = '<';
+                    for(_type_param in _type_params) {
+                        if(_type_param.nodeName != 'd') {
+                            _arg_type_params += _type_param.get('path') + ',';
+                        } else {
+                            _arg_type_params += 'Dynamic,';
+                        }
+                    }
+                    _arg_type_params = _arg_type_params.substring(0, _arg_type_params.length-1);
+                    _arg_type_params += '>';
+                    _arg_types.push( _arg_info.get('path') + _arg_type_params );
+                } else {
+                        //all others just store the type 
+                    _arg_types.push( _arg_info.get('path') );
+                }                
             }
 
         } //for each argument info node elements
