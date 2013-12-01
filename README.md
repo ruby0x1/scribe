@@ -44,9 +44,12 @@ Note the library is WIP (see roadmap) but is usable already.
 	  scribe <options>
 
 	options list :
-	  generate, config, version
+	  version, generate, display, input, config 
 
 	options :
+
+	  --version
+	      displays the version number
 
 	  --generate <optional output file>
 	      generate an output file, specified in config.output or 
@@ -56,16 +59,12 @@ Note the library is WIP (see roadmap) but is usable already.
 	      if display is set and generate is set, output will be 
 	      printed to stdout instead of saved to the file.
 
-	  --version
-	      displays the version number
-
-	  --config config.json
-	      when run without this flag, scribe will look for a scribe.json in the same folder.
-
 	  --input haxedoc.xml
 	      generate documentation from this file (config.input)
 
-
+	  --config config.json
+	      when run without this flag, scribe will look for a scribe.json in the same folder.
+	      
 ---
 ###Roadmap
 
