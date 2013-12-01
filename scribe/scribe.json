@@ -1,0 +1,1 @@
+{ "input":"docs.xml", "output":"docs.json", "allowed_packages":"luxe.utils.GeometryUtils" }

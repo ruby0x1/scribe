@@ -1,0 +1,7 @@
+usage : 
+  --generate
+
+config :
+  scribe, when run without an explicit config file, will look for scribe.json in the same folder.
+
+todo::

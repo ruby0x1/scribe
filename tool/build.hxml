@@ -1,0 +1,6 @@
+-main Main
+-neko scribe.n
+-cp ../
+-lib arguable
+-resource usage@usage
+-resource version@version
