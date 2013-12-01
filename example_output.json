@@ -1,6 +1,10 @@
 {
 	"classes":[
 		{ "name": "luxe.utils.GeometryUtils",
+			"extends":[
+			],
+			"implements":[
+			],
 			"members":[
 				{
 					"name":"luxe",
@@ -56,12 +60,12 @@
 						"public":true,
 						"static":false,
 						"inline":false,
-						"signature":"point_in_polygon(_point:luxe.Vector, _offset:luxe.Vector, _verts:Array) : Bool",
+						"signature":"point_in_polygon(_point:luxe.Vector, _offset:luxe.Vector, _verts:Array<luxe.Vector>) : Bool",
 						"return":": Bool",
 						"args":[
 							{ "name": "_point","type": "luxe.Vector" },
 							{ "name": "_offset","type": "luxe.Vector" },
-							{ "name": "_verts","type": "Array" }
+							{ "name": "_verts","type": "Array<luxe.Vector>" }
 						]
 					},
 				{
