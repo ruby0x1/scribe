@@ -4,26 +4,34 @@ import arguable.ArgParser.ArgValues;
 
 class Main {
 
+    static var cwd : String = '';
+
     public function new( args : ArgValues ) {
 
         var config_path = 'scribe.json';
 
+        cwd = Sys.getCwd();
+
         if( args.has('version') && args.length == 1 ) {
             display_version(false);
             return;
-        }
+        } //version
 
         if( args.has('config') ) {
             config_path = args.get('config').value;
-        }
+        } //config
 
         if( !sys.FileSystem.exists( config_path ) ) {
+
             display_version();
+
             Sys.println('- ERROR - Config path was invalid. ');
             Sys.println('-       - Use a scribe.json file in the current folder or ');
             Sys.println('-       - pass the config path using --config your.config.json\n');
+            
             return;
-        }
+
+        } // config_path
 
             //read the config path
         var config = haxe.Json.parse( Utils.read_file( config_path ) );
@@ -31,16 +39,16 @@ class Main {
             display_version();
             Sys.println('- ERROR - Config file was unreadable?. \n');
             return;
-        }
+        } //config == null
 
             //If attempting to generate
         if( args.has('generate') ) {
             if(!handle_generate( args, config )) {
                 return;
             }
-        }
+        } // generate
 
-    }
+    } //new
 
     static function handle_generate( args:ArgValues, config:Dynamic ) : Bool {
             
@@ -85,16 +93,126 @@ class Main {
             return false;
         }
         
-        return do_generate( input_file, output_file, config );
+        return do_generate( args, config, input_file, output_file );
 
     } //handle_generate
+
+    static function generate_build_flags_hxml( args:ArgValues, config:Dynamic ) {
+
+            //this runs a command like :
+            //lime display /project/path/project.xml target
+
+        var project_path : String = '';
+
+        if(config.lime_project != null) {
+            project_path = config.lime_project;
+        }
+
+        if(args.has('lime_project')) {
+            project_path = args.get('lime_project').value;
+        }
+
+        if(project_path == '') {
+            Sys.println("\n- WARNING - lime project type xml output requested but no lime project specified in config or with --lime_project");
+            return '';
+        }
+
+        var project_type = 'project.luxe.xml';
+
+        config.__project_path = project_path;
+
+        var run_args = [
+            'display',
+            config.__project_path + project_type, 
+            Utils.current_platform()
+        ];
+
+        var process = new sys.io.Process('lime', run_args );
+        var results = process.stdout.readAll().toString();
+
+            process.close();
+
+        return results;
+    }
+
+    static function generate_types_xml( args:ArgValues, config:Dynamic ) : String {
+
+            //try and generate the build flags
+        var flags = generate_build_flags_hxml(args, config);
+
+            //warning is up higher in the flags so we 
+            //can gracefully ignore
+        if(flags == '') {
+            return '';
+        }
+
+            //There are flags, we can write them to a temp file
+        Utils.save_file('.scribe.last_build_flags.hxml', flags);
+
+            //The allowed packages should definitely be included, whether they are referenced or not
+        if(Std.is(config.allowed_packages, String)) {
+            config.allowed_packages = config.allowed_packages.split(',');
+        }
+            //so store them in an array
+        var _allowed_packages : Array<String> = config.allowed_packages;
+
+            //now we construct our arguments for generating the xml type file
+        var run_args = [
+            cwd + '/.scribe.last_build_flags.hxml',
+            '--no-output',
+            '-xml',
+            cwd + '/scribe.types.xml'
+        ];
+
+            //and append each as a explicit --macro include('my.package')
+        for(_package in _allowed_packages) {
+            run_args.push('--macro');
+            run_args.push('include("' + _package + '.*")');
+        }
+
+        Sys.println( run_args );
+
+            //change to the project path
+        Sys.setCwd( config.__project_path );
+
+            //and run it
+        var _process = new sys.io.Process('haxe', run_args);
+        var _results = _process.stdout.readAll().toString();
+
+        var exitcode = _process.exitCode();
+        if(exitcode != 0) {
+            Sys.println("- ERROR - from lime project compile : ");
+            Sys.println(_process.stderr.readAll());
+        }
+
+        _process.close();
+
+            //set back to running path
+        Sys.setCwd(cwd);
+
+        return _results;
+
+    } //generate_types_xml
         
-    static function do_generate(input_file:String, output_file:String, config:Dynamic) : Bool {
+    static function do_generate( args:ArgValues, config:Dynamic, input_file:String, output_file:String ) : Bool {
 
             //to measure how long
         var _start_time = haxe.Timer.stamp();
+            //if the input is a special file name we attempt to genrate the xml first
+        if(input_file == 'scribe.types.xml') {
+            generate_types_xml( args, config );
+        }
             //read the file data
-        var _xml_data = Utils.read_file( input_file );
+        var _xml_data = '';
+
+        try {
+            _xml_data = Utils.read_file( input_file );
+        } catch( e:Dynamic ) {
+            Sys.println( "- ERROR - cannot read input xml file? " + input_file );
+            Sys.println( e + "\n" );
+            return false;
+        }
+
             //parse it
         var haxedoc = scribe.Scribe.parse_from_string(config, _xml_data);
             //export it
@@ -119,17 +237,21 @@ class Main {
 
 
     public static function display_version(adorned:Bool = true) {
+
         if(adorned) {
             Sys.println( '\nscribe v' + haxe.Resource.getString("version") + '\n' );
         } else {
             Sys.println( haxe.Resource.getString("version") );
         }
-    }   
+
+    } //display_version
 
     public static function display_usage() { 
-        display_version();       
+
+        display_version();
         Sys.println( haxe.Resource.getString("usage") );
-    }
+
+    } //display_usage
 
     static function main() {
 
@@ -141,6 +263,6 @@ class Main {
             Main.display_usage();
         }
 
-    } //main()
+    } //main
 
 } //Main

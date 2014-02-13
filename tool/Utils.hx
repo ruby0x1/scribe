@@ -13,4 +13,8 @@ class Utils {
             file.writeString(_content);
             file.close();
     }    
+
+    public static function current_platform() : String {
+        return Std.string(Sys.systemName()).toLowerCase();
+    }
 }

@@ -1,1 +1,1 @@
-{ "input":"docs.xml", "output":"docs.json", "force":true, "allowed_packages":"luxe.utils.GeometryUtils" }
+{ "input":"scribe.types.xml", "lime_project":"/Users/Sven/dev/luxe/luxe/template_projects/empty/", "output":"/Users/Sven/dev/luxe/luxe/docs_src/apis/docsjson", "force":true, "allowed_packages":"luxe,phoenix" }

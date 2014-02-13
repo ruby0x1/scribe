@@ -39,8 +39,28 @@ class JSON {
     static function push_class(export_json:String, _class:ClassDoc, tab_depth:Int, _c:Int, _t:Int ) {
 
         export_json = insert(export_json, '{ "name": "'+ _class.name +'",', tab_depth);
+
+//Meta
+            export_json = insert(export_json, '  "meta":[', tab_depth);
+                tab_depth++;
+
+                        //for each member
+                    var _meta_count = Lambda.count(_class.meta);
+                    var _current_meta = 0;
+                    for(_meta in _class.meta) {
+                        _current_meta++;
+                        export_json = push_meta(export_json, _meta.name, _meta.value, tab_depth, _current_meta, _meta_count);
+                    }
+
+                tab_depth--;
+            export_json = insert(export_json, '  ],', tab_depth);
+
+
+// Sub properties
+
             tab_depth++;
 
+    //extends
                 export_json = insert(export_json, '"extends":[', tab_depth);
                     tab_depth++;
 
@@ -54,6 +74,7 @@ class JSON {
 
                     tab_depth--;
                 export_json = insert(export_json, '],', tab_depth);
+    //implements
                 export_json = insert(export_json, '"implements":[', tab_depth);
                     tab_depth++;
 
@@ -62,11 +83,12 @@ class JSON {
                         var _current_implement = 0;
                         for(_implement in _class.implement) {
                             _current_implement++;
-                            export_json = push_implement(export_json, _implement, tab_depth, _current_extend, _implements_count);
+                            export_json = push_implement(export_json, _implement, tab_depth, _current_implement, _implements_count);
                         }
 
                     tab_depth--;
                 export_json = insert(export_json, '],', tab_depth);
+    //members
                 export_json = insert(export_json, '"members":[', tab_depth);
                     tab_depth++;
 
@@ -80,6 +102,7 @@ class JSON {
 
                     tab_depth--;
                 export_json = insert(export_json, '],', tab_depth);
+    //properties
                 export_json = insert(export_json, '"properties":[', tab_depth);
                     tab_depth++;
 
@@ -93,6 +116,7 @@ class JSON {
 
                     tab_depth--;
                 export_json = insert(export_json, '],', tab_depth);
+    //methods
                 export_json = insert(export_json, '"methods":[', tab_depth);
                     tab_depth++;
 
@@ -113,6 +137,10 @@ class JSON {
         return export_json;
     }
 
+    static function push_meta(export_json:String, _meta:String, _value:String='', tab_depth:Int, _c:Int, _t:Int ) {
+        export_json = insert(export_json, '{ "name":"'+_meta+'", "value":"'+_value+'" }' + ((_c != _t) ? ',' : ''), tab_depth);
+        return export_json;
+    }
     static function push_extend(export_json:String, _extend:String, tab_depth:Int, _c:Int, _t:Int ) {
         export_json = insert(export_json, '{ "name":"'+_extend+'" }' + ((_c != _t) ? ',' : ''), tab_depth);
         return export_json;
@@ -128,6 +156,22 @@ class JSON {
 
                     //write the member values
                 export_json = insert(export_json, '"name":"'+_member.name+'",', tab_depth);
+
+            //Meta
+                export_json = insert(export_json, '  "meta":[', tab_depth);
+                    tab_depth++;
+
+                            //for each member
+                        var _meta_count = Lambda.count(_member.meta);
+                        var _current_meta = 0;
+                        for(_meta in _member.meta) {
+                            _current_meta++;
+                            export_json = push_meta(export_json, _meta.name, _meta.value, tab_depth, _current_meta, _meta_count);
+                        }
+
+                    tab_depth--;
+                export_json = insert(export_json, '  ],', tab_depth);
+
 
                 tab_depth++;
                     export_json = insert(export_json, '"public":'       + _member.ispublic + ',', tab_depth);
@@ -146,6 +190,22 @@ class JSON {
             tab_depth++;
 
                 export_json = insert(export_json, '"name":"'+_property.name+'",', tab_depth);
+  
+            //Meta
+                export_json = insert(export_json, '  "meta":[', tab_depth);
+                    tab_depth++;
+
+                            //for each member
+                        var _meta_count = Lambda.count(_property.meta);
+                        var _current_meta = 0;
+                        for(_meta in _property.meta) {
+                            _current_meta++;
+                            export_json = push_meta(export_json, _meta.name, _meta.value, tab_depth, _current_meta, _meta_count);
+                        }
+
+                    tab_depth--;
+                export_json = insert(export_json, '  ],', tab_depth);
+
 
                     //write the member values
                 tab_depth++;
@@ -165,6 +225,22 @@ class JSON {
             tab_depth++;
 
                 export_json = insert(export_json, '"name":"'+_method.name+'",', tab_depth);
+
+            //Meta
+                export_json = insert(export_json, '  "meta":[', tab_depth);
+                    tab_depth++;
+
+                            //for each member
+                        var _meta_count = Lambda.count(_method.meta);
+                        var _current_meta = 0;
+                        for(_meta in _method.meta) {
+                            _current_meta++;
+                            export_json = push_meta(export_json, _meta.name, _meta.value, tab_depth, _current_meta, _meta_count);
+                        }
+
+                    tab_depth--;
+                export_json = insert(export_json, '  ],', tab_depth);
+                
 
                     //write the member values
                 tab_depth++;

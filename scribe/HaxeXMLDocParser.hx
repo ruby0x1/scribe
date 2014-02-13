@@ -5,6 +5,7 @@ typedef PropertyDoc = {
     var isread : Bool;
     var iswrite : Bool;
 
+    var meta : Map<String, MetaDoc>;
     var signature : String;
     var type : String;
     var type_desc : String;
@@ -16,6 +17,7 @@ typedef MemberDoc = {
     var isstatic : Bool;
     var isinline : Bool;
 
+    var meta : Map<String, MetaDoc>;
     var signature : String;
     var type : String;
     var name : String;
@@ -26,6 +28,11 @@ typedef UnknownDoc = {
     var node : Xml;    
 };
 
+typedef MetaDoc = {
+    var name : String;
+    var value : String;    
+};
+
 typedef Argument = {
     var name : String;
     var type : String;
@@ -34,8 +41,9 @@ typedef Argument = {
 typedef MethodDoc = { 
     var ispublic : Bool;
     var isstatic : Bool;
-    var isinline : Bool;
+    var isinline : Bool;    
 
+    var meta : Map<String, MetaDoc>;
     var signature : String;
     var args : Array<Argument>;
     var returntype : String;
@@ -45,7 +53,7 @@ typedef MethodDoc = {
 typedef ClassDoc = {
     var ispublic : Bool;
 
-    var meta : Map<String, Dynamic>;
+    var meta : Map<String, MetaDoc>;
     var extend : Array<String>;
     var implement : Array<String>;
     var members : Map<String, MemberDoc>;
@@ -116,22 +124,51 @@ class HaxeXMLDocParser {
 
     } //parse
 
+    static function parse_meta_for_item( _meta_tags:Iterator<Xml> ) {
+
+        var _meta = new Map<String, MetaDoc>();
+
+        if(_meta_tags != null) {
+            for(_child in _meta_tags) {
+                var _meta_elements = _child.elements();
+                for(_meta_item in _meta_elements) {
+
+                    var _meta_value = '';
+                    var _value_node = _meta_item.elementsNamed("e");
+
+                    if(_value_node.hasNext()) {
+                        _meta_value = Std.string( _value_node.next().firstChild() );
+                    }
+                        //for now we have to remove the quotes from strings, 
+                        //not sure if that's gonna cause possible headaches but 
+                        //worth looking into
+
+                    _meta.set( 'meta', {
+                        name : Std.string(_meta_item.get('n')), 
+                        value : StringTools.replace(_meta_value, '"','')
+                    });
+
+                } //for meta in _meta_elements
+            } //for child in meta_tags
+        } //if meta tags != null
+
+        return _meta;
+
+    } //parse_meta_for_item
+
     static function parse_class( _class:Xml, config:Dynamic ) : ClassDoc {
 
         var _members = new Map<String, MemberDoc>();
         var _methods = new Map<String, MethodDoc>();
         var _properties = new Map<String, PropertyDoc>();
-        var _unknowns = new Map<String, UnknownDoc>();
-        var _meta = new Map<String, Dynamic>();
+        var _unknowns = new Map<String, UnknownDoc>();        
         var _extends = new Array<String>();
         var _implements = new Array<String>();
         var _meta_tags = _class.elementsNamed('meta');
 
         var _isprivate : Bool = (_class.get('private') != null);
 
-        if(_meta_tags != null) {
-            _meta.set('meta', _meta_tags.next());
-        }
+        var _meta = parse_meta_for_item( _meta_tags );
 
             //for each member, parse it and store it
         for(_member in _class.elements()) {
@@ -232,7 +269,11 @@ class HaxeXMLDocParser {
 
             var _signature : String = '';
             var _type : String = '';
-            var _name : String = _member.nodeName;
+            var _name : String = _member.nodeName;            
+            var _meta_tags = _member.elementsNamed('meta');
+
+                //parse the specific meta flags
+            var _meta = parse_meta_for_item( _meta_tags );
 
                     //access flags
                 _isstatic = (_member.get('static') != null);
@@ -281,6 +322,7 @@ class HaxeXMLDocParser {
             isstatic : _isstatic,
             isinline : _isinline,
 
+            meta : _meta,
             signature : _signature,
             type : _type,
             name : _name
@@ -298,6 +340,10 @@ class HaxeXMLDocParser {
         var _args : Array<Argument> = [];
         var _returntype : String = '';
         var _name : String = '';
+        var _meta_tags = _member.elementsNamed('meta');
+
+            //parse the specific meta flags
+        var _meta = parse_meta_for_item( _meta_tags );
 
                     //access flags
                 _isstatic = (_member.get('static') != null);
@@ -325,6 +371,7 @@ class HaxeXMLDocParser {
             isstatic : _isstatic,
             isinline : _isinline,
 
+            meta : _meta,
             args : _args,
             signature : _signature,
             returntype : _returntype,
@@ -343,6 +390,10 @@ class HaxeXMLDocParser {
         var _type : String = '';
         var _type_desc : String = 'read/write';
         var _name : String = '';
+        var _meta_tags = _member.elementsNamed('meta');
+
+            //parse the specific meta flags
+        var _meta = parse_meta_for_item( _meta_tags );
 
                 //type
             var _type_node = _member.firstElement();
@@ -373,6 +424,7 @@ class HaxeXMLDocParser {
             isread : _isread,
             iswrite : _iswrite,
 
+            meta : _meta,
             signature : _signature,
             type : _type,
             type_desc : _type_desc,
