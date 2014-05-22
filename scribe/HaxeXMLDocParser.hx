@@ -441,32 +441,35 @@ class HaxeXMLDocParser {
                 var _type_node = _member.firstElement();
                 var _membertype = 'Dynamic';
                 if(_type_node != null) {
-                    var _thetype = _type_node.get('path');
-                    if(_thetype != null) {
-                        
-                            //Type Parameter types have child elements
-                        var _type_params = _type_node.elements();
-                        var _has_type_params = _type_params.hasNext();
-                        if(_has_type_params) {
-                                //for each child element, append it
-                            var _member_type_params = '<';
-                            for(_type_param in _type_params) {
-                                if(_type_param.nodeName != 'd') {
-                                    _member_type_params += _type_param.get('path') + ',';
-                                } else {
-                                    _member_type_params += 'Dynamic,';
+                    if(_type_node.nodeName != 'f') {
+                        var _thetype = _type_node.get('path');
+                        if(_thetype != null) {
+                            
+                                //Type Parameter types have child elements
+                            var _type_params = _type_node.elements();
+                            var _has_type_params = _type_params.hasNext();
+                            if(_has_type_params) {
+                                    //for each child element, append it
+                                var _member_type_params = '<';
+                                for(_type_param in _type_params) {
+                                    if(_type_param.nodeName != 'd') {
+                                        _member_type_params += _type_param.get('path') + ',';
+                                    } else {
+                                        _member_type_params += 'Dynamic,';
+                                    }
                                 }
+                                _member_type_params = _member_type_params.substring(0, _member_type_params.length-1);
+                                _member_type_params += '>';
+
+                                _membertype = _thetype + _member_type_params;
+
+                            } else {
+                                _membertype = _thetype;
                             }
-                            _member_type_params = _member_type_params.substring(0, _member_type_params.length-1);
-                            _member_type_params += '>';
-
-                            _membertype = _thetype + _member_type_params;
-
-                        } else {
-                            _membertype = _thetype;
-                        }
-                    } //!= null
-
+                        } //!= null
+                    } else {//f
+                        _membertype = parse_internal_function_type(_type_node);
+                    }
                 }
 
                     //store 
@@ -576,8 +579,14 @@ class HaxeXMLDocParser {
             var _type_node = _member.firstElement();
             var _membertype = 'Dynamic';
             if(_type_node != null) {
-                var _thetype = _type_node.get('path');
-                if(_thetype != null) _membertype = _thetype;
+                if(_type_node.nodeName != 'f') {
+                    var _thetype = _type_node.get('path');
+                    if(_thetype != null && _thetype != 'null') {
+                        _membertype = _thetype;
+                    }
+                } else {  //f
+                    _membertype = parse_internal_function_type(_type_node);
+                }
             }
 
                 //we use these to determine the type
@@ -630,7 +639,12 @@ class HaxeXMLDocParser {
         var _final = '';
             //Just brute force them into a list with -> at the end
         for(_arg in _f.elements()) {
-            _final += _arg.get('path') + '->';
+            var _type = _arg.get('path');
+            if(_type == 'null' || _type == null) {
+                _type = 'Dynamic';
+            }
+
+            _final += _type + '->';
         }
 
             //And remove the final -> (... I know.)
