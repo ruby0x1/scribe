@@ -3,6 +3,7 @@ package scribe.export;
 import scribe.HaxeXMLDocParser.HaxeDoc;
 import scribe.HaxeXMLDocParser.ClassDoc;
 import scribe.HaxeXMLDocParser.TypedefDoc;
+import scribe.HaxeXMLDocParser.EnumDoc;
 import scribe.HaxeXMLDocParser.MemberDoc;
 import scribe.HaxeXMLDocParser.PropertyDoc;
 import scribe.HaxeXMLDocParser.MethodDoc;
@@ -44,6 +45,21 @@ class JSON {
                 for(_typedef in haxedoc.typedefs) {
                     _current_typedef++;
                     export_json = push_typedef(export_json, _typedef, tab_depth, _current_typedef, _typedef_count);
+                } //_class
+
+                tab_depth--;
+            export_json = insert(export_json, '],', tab_depth);
+    
+    //enums
+            export_json = insert(export_json, '"enums":[', tab_depth);
+                tab_depth++;
+
+                    //for each class
+                var _enum_count = Lambda.count(haxedoc.enums);
+                var _current_enum = 0;
+                for(_enum in haxedoc.enums) {
+                    _current_enum++;
+                    export_json = push_enum(export_json, _enum, tab_depth, _current_enum, _enum_count);
                 } //_class
 
                 tab_depth--;
@@ -203,6 +219,55 @@ class JSON {
                 export_json = insert(export_json, '"ispublic":' + _typedef.ispublic + ',', tab_depth);
                 export_json = insert(export_json, '"doc":"' + quote(_typedef.doc) + '",', tab_depth);
                 export_json = insert(export_json, '"alias":"' + quote(_typedef.alias) + '"', tab_depth);
+
+
+            tab_depth--;
+        export_json = insert(export_json, '}' + ((_c != _t) ? ',' : ''), tab_depth);
+
+        return export_json;
+    }
+
+    static function push_enum(export_json:String, _enum:EnumDoc, tab_depth:Int, _c:Int, _t:Int ) {
+
+        export_json = insert(export_json, '{ "name": "'+ _enum.name +'",', tab_depth);
+
+//Meta
+            export_json = insert(export_json, '  "meta":[', tab_depth);
+                tab_depth++;
+
+                        //for each member
+                    var _meta_count = Lambda.count(_enum.meta);
+                    var _current_meta = 0;
+                    for(_meta in _enum.meta) {
+                        _current_meta++;
+                        export_json = push_meta(export_json, _meta.name, _meta.value, tab_depth, _current_meta, _meta_count);
+                    }
+
+                tab_depth--;
+            export_json = insert(export_json, '  ],', tab_depth);
+
+
+// Sub properties
+
+            tab_depth++;
+
+    //members
+                export_json = insert(export_json, '"values":[', tab_depth);
+                    tab_depth++;
+
+                            //for each value
+                    var _total_enums = _enum.values.length;
+                    var _current_enum = 0;
+                    for(_value in _enum.values) {
+                        _current_enum++;
+                        export_json = insert(export_json, '"${_value}"' + ((_current_enum != _total_enums) ? ',' : ''), tab_depth);                        
+                    }
+
+                    tab_depth--;
+                export_json = insert(export_json, '],', tab_depth);
+    //doc
+                export_json = insert(export_json, '"ispublic":' + _enum.ispublic + ',', tab_depth);
+                export_json = insert(export_json, '"doc":"' + quote(_enum.doc) + '",', tab_depth);
 
 
             tab_depth--;

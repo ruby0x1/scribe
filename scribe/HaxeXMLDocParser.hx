@@ -53,6 +53,14 @@ typedef MethodDoc = {
     var name : String;
 };
 
+typedef EnumDoc = {
+    var name : String;
+    var ispublic : Bool;
+    var doc : String;
+    var meta : Map<String, MetaDoc>;
+    var values : Array<String>;
+}
+
 typedef TypedefDoc = {
     var ispublic : Bool;
     
@@ -83,8 +91,11 @@ typedef PackageDoc = {
 typedef HaxeDoc = {
     var classnames : Array<String>;
     var typedefnames : Array<String>;
+    var enumnames : Array<String>;
+
     var classes : Map<String, ClassDoc>;
     var typedefs : Map<String, TypedefDoc>;
+    var enums : Map<String, EnumDoc>;
 };
 
 //Internal typedefs
@@ -101,9 +112,11 @@ class HaxeXMLDocParser {
 
         var _classnames : Array<String> = [];
         var _typedefnames : Array<String> = [];
+        var _enumnames : Array<String> = [];
 
         var _classes : Map<String, ClassDoc> = new Map<String,ClassDoc>();
         var _typedefs : Map<String, TypedefDoc> = new Map<String, TypedefDoc>();
+        var _enums : Map<String, EnumDoc> = new Map<String, EnumDoc>();
 
         for(_class in root.elementsNamed('class')) {
 
@@ -137,13 +150,34 @@ class HaxeXMLDocParser {
                 _typedefs.set( _package, parse_typedef( _typedef, config ) );
             }
 
-        } //for each typedef        
+        } //for each typedef 
+
+        for(_enum in root.elementsNamed('enum')) {
+
+            var _package = _enum.get('path');
+
+                //check that the class is in the allowed packages,
+                //and if so add it to the list
+            var _allowed = package_allowed(config, _package);
+
+            if(_allowed) {
+                    //store the class in the list of names
+                _enumnames.push( _package );
+                    //finally store the ClassDoc in the list
+                _enums.set( _package, parse_enum( _enum, config ) );
+            }
+
+        } //for each enum        
 
         return { 
             classnames :_classnames, 
             classes :_classes,
+
             typedefnames :_typedefnames,
-            typedefs :_typedefs
+            typedefs :_typedefs,
+
+            enumnames :_enumnames,
+            enums :_enums
         };
 
     } //parse
@@ -207,10 +241,34 @@ class HaxeXMLDocParser {
 
     } //parse_meta_for_item
 
+    static function parse_enum( _enum:Xml, config:Dynamic ) : EnumDoc {
+
+        var _values : Array<String> = [];
+        var _meta_tags = _enum.elementsNamed('meta');
+        
+        var _isprivate : Bool = (_enum.get('private') != null);
+        var _meta = parse_meta_for_item( _meta_tags );
+        var _doc : String = '';
+
+        for(_value in _enum.elements()) {
+            if(_value.nodeName != 'meta') {
+                _values.push( _value.nodeName );
+            }
+        }
+
+        return {
+            name : _enum.get('path'),
+            ispublic : !_isprivate,
+            doc : _doc,
+            meta : _meta,
+            values : _values,
+        };
+
+    } //parse_enum
+
     static function parse_typedef( _typedef:Xml, config:Dynamic ) : TypedefDoc {
 
         var _members = new Map<String, MemberDoc>();
-        var _unknowns = new Map<String, UnknownDoc>();        
         var _meta_tags = _typedef.elementsNamed('meta');
         var _isprivate : Bool = (_typedef.get('private') != null);
 
@@ -232,7 +290,7 @@ class HaxeXMLDocParser {
         }
 
         return {
-            ispublic : true,
+            ispublic : !_isprivate,
             doc : _doc,
             alias : _alias,
             meta : _meta,
