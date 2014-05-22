@@ -110,6 +110,7 @@ private typedef InternalMethodInfo = {
     var name : String;
     var args : Array<Argument>;
     var return_type : String;
+    var params : Array<String>;
 }; 
 
 class HaxeXMLDocParser {
@@ -568,8 +569,20 @@ class HaxeXMLDocParser {
                 _shortargs.push( _arg.name + ':' + _arg.type + _value); 
             }
 
+        var _params = '';
+        if(_finfo.params.length > 0) {
+            _params = '<';
+            var _t = _finfo.params.length;
+            var _c = 0;
+            for(_p in _finfo.params) {
+                _c++;
+                _params += _p + ((_c != _t) ? ',' : '');
+            }
+            _params += '>';
+        }
+
             //Store the final values
-        _signature = _finfo.name + '(' + _shortargs.join(', ') + ') ' +  _rtype;
+        _signature = _finfo.name + _params + '(' + _shortargs.join(', ') + ') ' +  _rtype;
         _args = _finfo.args;
         _returntype = _rtype;
         _name = _member.nodeName;
@@ -700,6 +713,8 @@ class HaxeXMLDocParser {
         var _args_values : String = _node.get('v');
         var _args = [];
         var _arg_values = [];
+        var _params : Array<String> = [];
+
             //if there are any, split and store them
         if(_args_list.length > 0) {
             _args = _args_list.split(':');
@@ -713,13 +728,14 @@ class HaxeXMLDocParser {
         var _return_type = '';
 
             //for each of the node elements in the argument node
-        for(_arg_info in _node.elements()) {      
+        for(_arg_info in _node.elements()) {
 
             if(_arg_info.nodeName == 'f') {
                     //if it's a function, there is a more complex approac hander
                 _arg_types.push( parse_internal_function_type(_arg_info) );
+
             } else {
-                    
+
                     //Type Parameter types have child elements
                 var _type_params = _arg_info.elements();
                 var _has_type_params = _type_params.hasNext();
@@ -747,7 +763,9 @@ class HaxeXMLDocParser {
             //return type is the last item in the _arg_types
         _return_type = _arg_types.pop();
 
-        if(_return_type == 'null' || _return_type == null) _return_type = 'Dynamic';
+        if(_return_type == 'null' || _return_type == null) {
+            _return_type = 'Dynamic';
+        }
 
             //Now recombine these into a list by name:Type
             //If no type is specified, insert Dynamic (this could be something else? Null<?>)
@@ -774,9 +792,16 @@ class HaxeXMLDocParser {
 
         } //for each collected argument
 
+            //parse function type params
+        if(_member.exists('params')) {
+            var _typeparams = _member.get('params');
+            _params = _typeparams.split(':');
+        }
+
         return {
             name : _member.nodeName,
             args : _args_final,
+            params : _params,
             return_type : _return_type
         };
 
