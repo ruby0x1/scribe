@@ -75,6 +75,24 @@ Note the library is WIP (see roadmap) but is usable already.
 - submit to haxelib with run script
 
 ---
+###History
+
+**0.9.0** 
+
+- updating to include haxe_doc values
+- changing the type of delimeter for the --flag to be -flag
+- making it run as a haxelib rather than as a standalone tool
+- and running from the correct path
+- so the scribe.json and other data can be project specific
+- changing the lime project to be the project file path
+- instead of folder (this allows usage for any project etc)
+- bumping version to 0.9.0 before finalising the api and usage for 1.0.0 release on haxelib
+
+**0.1.0** 
+
+- Initial version with basic import/export to JSON
+
+---
 License : MIT
 
 
