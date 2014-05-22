@@ -3,3 +3,5 @@
 .DS_Store?
 docs.xml
 docs.json
+scribe.types.xml
+.scribe.last_build_flags.hxml

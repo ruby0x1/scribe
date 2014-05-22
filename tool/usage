@@ -6,20 +6,20 @@ options list :
 
 options :
 
-  --version
+  -version
       displays the version number
 
-  --generate <optional output file>
+  -generate <optional output file>
       generate an output file, specified in config.output or 
       specified as an optional output file argument.
 
-  --display
+  -display
       if display is set and generate is set, output will be 
       printed to stdout instead of saved to the file.
 
-  --input haxedoc.xml
+  -input haxedoc.xml
       generate documentation from this file (config.input), if the file is a special value of "scribe.types.xml" in config or here, the project will attempt to make use of the lime_project config or argument in order to generate the "scribe.types.xml" file directly from the source lime project xml file.
 
-  --config config.json
+  -config config.json
       when run without this flag, scribe will look for a scribe.json in the same folder.
   

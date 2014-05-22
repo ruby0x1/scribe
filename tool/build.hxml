@@ -1,5 +1,5 @@
 -main Main
--neko scribe.n
+-neko ../run.n
 -cp ../
 -lib arguable
 -resource usage@usage

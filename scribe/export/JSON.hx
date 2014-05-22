@@ -129,7 +129,10 @@ class JSON {
                         }
 
                     tab_depth--;
-                export_json = insert(export_json, ']', tab_depth);
+                export_json = insert(export_json, '],', tab_depth);
+    //doc
+                export_json = insert(export_json, '"doc":"' + quote(_class.doc) + '"', tab_depth);
+
 
             tab_depth--;
         export_json = insert(export_json, '}' + ((_c != _t) ? ',' : ''), tab_depth);
@@ -178,7 +181,8 @@ class JSON {
                     export_json = insert(export_json, '"inline":'       + _member.isinline + ',', tab_depth);
                     export_json = insert(export_json, '"static":'       + _member.isstatic + ',', tab_depth);
                     export_json = insert(export_json, '"signature":"'   + _member.signature + '",', tab_depth);
-                    export_json = insert(export_json, '"type":"'        + _member.type + '"', tab_depth);
+                    export_json = insert(export_json, '"type":"'        + _member.type + '",', tab_depth);
+                    export_json = insert(export_json, '"doc":"'         + quote(_member.doc) + '"', tab_depth);
                 tab_depth--;
                 
             tab_depth--;
@@ -212,6 +216,7 @@ class JSON {
                     export_json = insert(export_json, '"get":'          + _property.isread + ',', tab_depth);
                     export_json = insert(export_json, '"set":'          + _property.iswrite + ',', tab_depth);
                     export_json = insert(export_json, '"signature":"'   + _property.signature + '",', tab_depth);
+                    export_json = insert(export_json, '"doc":"'         + quote(_property.doc) + '",', tab_depth);
                     export_json = insert(export_json, '"type":"'        + _property.type + '",', tab_depth);
                     export_json = insert(export_json, '"type_desc":"'   + _property.type_desc + '"', tab_depth);
                 tab_depth--;
@@ -247,6 +252,7 @@ class JSON {
                     export_json = insert(export_json, '"public":'       + _method.ispublic + ',', tab_depth);
                     export_json = insert(export_json, '"static":'       + _method.isstatic + ',', tab_depth);
                     export_json = insert(export_json, '"inline":'       + _method.isinline + ',', tab_depth);
+                    export_json = insert(export_json, '"doc":"'         + quote(_method.doc) + '",', tab_depth);
                     export_json = insert(export_json, '"signature":"'   + _method.signature + '",', tab_depth);
                     export_json = insert(export_json, '"return":"'      + _method.returntype + '",', tab_depth);
                 
@@ -266,11 +272,18 @@ class JSON {
         return export_json;
     }
 
-    static function tabs(_s:String, _count:Int) { for(i in 0 ..._count) { _s = '\t' + _s; }  return _s; }
+    static function tabs(_s:String, _count:Int) { for(i in 0 ..._count) { _s = '  ' + _s; }  return _s; }
     static function insert( _target:String, _kind:String, _tabs:Int ) {
         _target += tabs(_kind, _tabs) + '\n';
         return _target;
     }   
 
+    static function quote( s : String ) {
+            
+        if(s.length == 0) return s;
+        return StringTools.replace(s, '"', '\\\"');
+
+    }
 
 } //JSON
+

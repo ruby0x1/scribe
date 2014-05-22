@@ -5,6 +5,7 @@ typedef PropertyDoc = {
     var isread : Bool;
     var iswrite : Bool;
 
+    var doc : String;
     var meta : Map<String, MetaDoc>;
     var signature : String;
     var type : String;
@@ -17,6 +18,7 @@ typedef MemberDoc = {
     var isstatic : Bool;
     var isinline : Bool;
 
+    var doc : String;
     var meta : Map<String, MetaDoc>;
     var signature : String;
     var type : String;
@@ -43,6 +45,7 @@ typedef MethodDoc = {
     var isstatic : Bool;
     var isinline : Bool;    
 
+    var doc : String;
     var meta : Map<String, MetaDoc>;
     var signature : String;
     var args : Array<Argument>;
@@ -53,6 +56,7 @@ typedef MethodDoc = {
 typedef ClassDoc = {
     var ispublic : Bool;
 
+    var doc : String;
     var meta : Map<String, MetaDoc>;
     var extend : Array<String>;
     var implement : Array<String>;
@@ -170,6 +174,8 @@ class HaxeXMLDocParser {
 
         var _meta = parse_meta_for_item( _meta_tags );
 
+        var _doc = '';
+
             //for each member, parse it and store it
         for(_member in _class.elements()) {
 
@@ -248,8 +254,18 @@ class HaxeXMLDocParser {
 
         } //for each element in the class
 
+        var _doc_root = _class.elementsNamed('haxe_doc');
+        if(_doc_root != null) {
+            for(child in _doc_root) {
+                _doc = Std.string( child.firstChild() );
+                _doc = StringTools.replace(_doc,'\n','\\n');
+            }
+        }
+
+
         return { 
             name:_class.get('path'), 
+            doc:_doc,
             meta:_meta, 
             extend:_extends, 
             implement:_implements, 
@@ -267,6 +283,7 @@ class HaxeXMLDocParser {
             var _isstatic : Bool = false;
             var _isinline : Bool = false;
 
+            var _doc : String = '';
             var _signature : String = '';
             var _type : String = '';
             var _name : String = _member.nodeName;            
@@ -317,11 +334,20 @@ class HaxeXMLDocParser {
                 _type = _membertype;
                 _name = _member.nodeName;
 
+                var _doc_root = _member.elementsNamed('haxe_doc');
+                if(_doc_root != null) {
+                    for(child in _doc_root) {
+                        _doc = Std.string( child.firstChild() );
+                        _doc = StringTools.replace(_doc,'\n','\\n');
+                    }
+                }
+
         return { 
             ispublic : _ispublic,
             isstatic : _isstatic,
             isinline : _isinline,
 
+            doc : _doc,
             meta : _meta,
             signature : _signature,
             type : _type,
@@ -336,6 +362,7 @@ class HaxeXMLDocParser {
         var _isstatic : Bool = false;
         var _isinline : Bool = false;
 
+        var _doc : String = '';
         var _signature : String = '';
         var _args : Array<Argument> = [];
         var _returntype : String = '';
@@ -366,11 +393,20 @@ class HaxeXMLDocParser {
         _returntype = _rtype;
         _name = _member.nodeName;
 
+        var _doc_root = _member.elementsNamed('haxe_doc');
+        if(_doc_root != null) {
+            for(child in _doc_root) {
+                _doc = Std.string( child.firstChild() );
+                _doc = StringTools.replace(_doc,'\n','\\n');
+            }
+        }
+
         return { 
             ispublic : _ispublic,
             isstatic : _isstatic,
             isinline : _isinline,
 
+            doc : _doc,
             meta : _meta,
             args : _args,
             signature : _signature,
@@ -386,6 +422,7 @@ class HaxeXMLDocParser {
         var _isread : Bool = true;
         var _iswrite : Bool = true;
 
+        var _doc : String = '';
         var _signature : String = '';
         var _type : String = '';
         var _type_desc : String = 'read/write';
@@ -420,10 +457,19 @@ class HaxeXMLDocParser {
             _type = _membertype;
             _signature = _member.nodeName  + ' : ' + _membertype;
 
+            var _doc_root = _member.elementsNamed('haxe_doc');
+            if(_doc_root != null) {
+                for(child in _doc_root) {
+                    _doc = Std.string( child.firstChild() );
+                    _doc = StringTools.replace(_doc,'\n','\\n');
+                }
+            }
+
         return {
             isread : _isread,
             iswrite : _iswrite,
 
+            doc : _doc,
             meta : _meta,
             signature : _signature,
             type : _type,
@@ -503,6 +549,8 @@ class HaxeXMLDocParser {
 
             //return type is the last item in the _arg_types
         _return_type = _arg_types.pop();
+
+        if(_return_type == 'null' || _return_type == null) _return_type = 'Dynamic';
 
             //Now recombine these into a list by name:Type
             //If no type is specified, insert Dynamic (this could be something else? Null<?>)

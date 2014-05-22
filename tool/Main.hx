@@ -4,13 +4,17 @@ import arguable.ArgParser.ArgValues;
 
 class Main {
 
+    static var old_cwd : String = '';
     static var cwd : String = '';
 
-    public function new( args : ArgValues ) {
+    public function new( run_path:String, args : ArgValues ) {
 
         var config_path = 'scribe.json';
 
-        cwd = Sys.getCwd();
+        old_cwd = Sys.getCwd();
+        cwd = run_path;
+
+        Sys.setCwd(cwd);
 
         if( args.has('version') && args.length == 1 ) {
             display_version(false);
@@ -25,9 +29,9 @@ class Main {
 
             display_version();
 
-            Sys.println('- ERROR - Config path was invalid. ');
+            Sys.println('- ERROR - Config path was invalid or config file is not found at ' + config_path);
             Sys.println('-       - Use a scribe.json file in the current folder or ');
-            Sys.println('-       - pass the config path using --config your.config.json\n');
+            Sys.println('-       - pass the config path using -config your.config.json\n');
             
             return;
 
@@ -44,9 +48,11 @@ class Main {
             //If attempting to generate
         if( args.has('generate') ) {
             if(!handle_generate( args, config )) {
-                return;
+                // return;
             }
         } // generate
+
+        Sys.setCwd(old_cwd);
 
     } //new
 
@@ -57,7 +63,7 @@ class Main {
 
         if(config.output == null && _generate_flag.value.length == 0 ) {
             display_version();
-            Sys.println('- ERROR - Output path is required in config.output or --generate outputfile.json \n');
+            Sys.println('- ERROR - Output path is required in config.output or -generate outputfile.json \n');
             return false;
         }
 
@@ -70,7 +76,7 @@ class Main {
             input_file = args.get('input').value;
             if(input_file.length == 0) {
                  display_version();
-                Sys.println('- ERROR - Cannot take --input without a file');
+                Sys.println('- ERROR - Cannot take -input without a file');
                 return false;
             }
         } else {
@@ -84,12 +90,12 @@ class Main {
         }
 
         if(args.has('display')) {
-            output_file = '--display';
+            output_file = '-display';
         }
 
         if( sys.FileSystem.exists( output_file ) && (!args.has('force') && !config.force ) ) {
             display_version();
-            Sys.println('- ERROR - Cannot override ' + output_file + ' without --force or config.force = true');
+            Sys.println('- ERROR - Cannot override ' + output_file + ' without -force or config.force = true');
             return false;
         }
         
@@ -113,17 +119,15 @@ class Main {
         }
 
         if(project_path == '') {
-            Sys.println("\n- WARNING - lime project type xml output requested but no lime project specified in config or with --lime_project");
+            Sys.println("\n- WARNING - lime project type xml output requested but no lime project specified in config or with -lime_project");
             return '';
         }
-
-        var project_type = 'project.luxe.xml';
 
         config.__project_path = project_path;
 
         var run_args = [
             'display',
-            config.__project_path + project_type, 
+            config.__project_path, 
             Utils.current_platform()
         ];
 
@@ -173,7 +177,7 @@ class Main {
         Sys.println( run_args );
 
             //change to the project path
-        Sys.setCwd( config.__project_path );
+        Sys.setCwd( haxe.io.Path.directory(config.__project_path) );
 
             //and run it
         var _process = new sys.io.Process('haxe', run_args);
@@ -218,7 +222,7 @@ class Main {
             //export it
         var json = scribe.export.JSON.format( haxedoc );
 
-        if(output_file != '--display') {
+        if(output_file != '-display') {
                 //save it
             Utils.save_file( output_file, json );
                 //calculate and round to a fixed precision
@@ -255,10 +259,15 @@ class Main {
 
     static function main() {
 
-        var results = ArgParser.parse( Sys.args() );
+        var system_args = Sys.args();
+        var run_path = system_args.pop();
+
+        ArgParser.delimeter = '-';
+
+        var results = ArgParser.parse( system_args );
 
         if(results.any) {
-            new Main( results );
+            new Main( run_path, results );
         } else {
             Main.display_usage();
         }
