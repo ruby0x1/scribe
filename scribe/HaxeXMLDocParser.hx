@@ -53,6 +53,16 @@ typedef MethodDoc = {
     var name : String;
 };
 
+typedef TypedefDoc = {
+    var ispublic : Bool;
+    
+    var doc : String;
+    var meta : Map<String, MetaDoc>;
+    var members : Map<String, MemberDoc>;
+    var name : String;
+    var alias : String;
+};
+
 typedef ClassDoc = {
     var ispublic : Bool;
 
@@ -72,7 +82,9 @@ typedef PackageDoc = {
 
 typedef HaxeDoc = {
     var classnames : Array<String>;
+    var typedefnames : Array<String>;
     var classes : Map<String, ClassDoc>;
+    var typedefs : Map<String, TypedefDoc>;
 };
 
 //Internal typedefs
@@ -88,50 +100,80 @@ class HaxeXMLDocParser {
     public static function parse( root:Xml, config:Dynamic ) : HaxeDoc {
 
         var _classnames : Array<String> = [];
+        var _typedefnames : Array<String> = [];
+
         var _classes : Map<String, ClassDoc> = new Map<String,ClassDoc>();
+        var _typedefs : Map<String, TypedefDoc> = new Map<String, TypedefDoc>();
 
         for(_class in root.elementsNamed('class')) {
 
-            var _package = _class.get('path');          
+            var _package = _class.get('path');
+            
+                //check that the class is in the allowed packages,
+                //and if so add it to the list
+            var _allowed = package_allowed(config, _package);
+
+            if(_allowed) {
+                    //store the class in the list of names
+                _classnames.push( _package );
+                    //finally store the ClassDoc in the list
+                _classes.set( _package, parse_class( _class, config ) );
+            }
+
+        } //for each class      
+
+        for(_typedef in root.elementsNamed('typedef')) {
+
+            var _package = _typedef.get('path');
 
                 //check that the class is in the allowed packages,
                 //and if so add it to the list
-            var _allowed = false;
-            if(config.allowed_packages != null) {
-
-                if(Std.is(config.allowed_packages, String)) {
-                    config.allowed_packages = config.allowed_packages.split(',');
-                }
-
-                var _allowed_packages : Array<String> = config.allowed_packages;
-                for(_allowed_package in _allowed_packages) {
-                    var regex_term = '^'+ _allowed_package +'.*$';
-                    var regex = new EReg(regex_term, 'gim');
-                    if(regex.match(_package)) {
-                        _allowed = true;                
-                    } //if there is a match
-                } //for each allowed package
-
-            } else { //config.allowed_packages
-                _allowed = true;
-            }
-
+            var _allowed = package_allowed(config, _package);
 
             if(_allowed) {
-
                     //store the class in the list of names
-                _classnames.push( _package );
-
+                _typedefnames.push( _package );
                     //finally store the ClassDoc in the list
-                _classes.set( _package, parse_class( _class, config ) );
-                
+                _typedefs.set( _package, parse_typedef( _typedef, config ) );
             }
 
-        } //for each class        
+        } //for each typedef        
 
-        return { classnames:_classnames, classes:_classes };
+        return { 
+            classnames :_classnames, 
+            classes :_classes,
+            typedefnames :_typedefnames,
+            typedefs :_typedefs
+        };
 
     } //parse
+
+    static function package_allowed(config:Dynamic, _package:String) {
+        
+        var _allowed = false;
+
+        if(config.allowed_packages != null) {
+
+            if(Std.is(config.allowed_packages, String)) {
+                config.allowed_packages = config.allowed_packages.split(',');
+            }
+
+            var _allowed_packages : Array<String> = config.allowed_packages;
+            for(_allowed_package in _allowed_packages) {
+                var regex_term = '^'+ _allowed_package +'.*$';
+                var regex = new EReg(regex_term, 'gim');
+                if(regex.match(_package)) {
+                    _allowed = true;                
+                } //if there is a match
+            } //for each allowed package
+
+        } else { //config.allowed_packages
+            _allowed = true;
+        }
+
+        return _allowed;
+
+    } //package_allowed
 
     static function parse_meta_for_item( _meta_tags:Iterator<Xml> ) {
 
@@ -164,6 +206,41 @@ class HaxeXMLDocParser {
         return _meta;
 
     } //parse_meta_for_item
+
+    static function parse_typedef( _typedef:Xml, config:Dynamic ) : TypedefDoc {
+
+        var _members = new Map<String, MemberDoc>();
+        var _unknowns = new Map<String, UnknownDoc>();        
+        var _meta_tags = _typedef.elementsNamed('meta');
+        var _isprivate : Bool = (_typedef.get('private') != null);
+
+        var _meta = parse_meta_for_item( _meta_tags );
+        var _doc = '';
+        var _alias = '';
+            
+            //for each member, parse it and store it
+        for(_item in _typedef.elements()) {
+            if(_item.nodeName == 'a') {
+                for(_member in _item.elements()) {
+                    var _parsed_member = parse_member(_member, config);
+                    _parsed_member.ispublic = true;
+                    _members.set( _member.nodeName, _parsed_member );
+                }
+            } else if(_item.nodeName == 'c') {
+                _alias = _item.get('path');
+            }
+        }
+
+        return {
+            ispublic : true,
+            doc : _doc,
+            alias : _alias,
+            meta : _meta,
+            members : _members,
+            name : _typedef.get('path')
+        };
+
+    } //parse_typedef
 
     static function parse_class( _class:Xml, config:Dynamic ) : ClassDoc {
 

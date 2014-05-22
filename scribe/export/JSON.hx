@@ -2,6 +2,7 @@ package scribe.export;
 
 import scribe.HaxeXMLDocParser.HaxeDoc;
 import scribe.HaxeXMLDocParser.ClassDoc;
+import scribe.HaxeXMLDocParser.TypedefDoc;
 import scribe.HaxeXMLDocParser.MemberDoc;
 import scribe.HaxeXMLDocParser.PropertyDoc;
 import scribe.HaxeXMLDocParser.MethodDoc;
@@ -17,6 +18,8 @@ class JSON {
 
         export_json = insert(export_json, '{', tab_depth );
             tab_depth++;
+
+    //classes
             export_json = insert(export_json, '"classes":[', tab_depth);
                 tab_depth++;
 
@@ -29,7 +32,24 @@ class JSON {
                 } //_class
 
                 tab_depth--;
+            export_json = insert(export_json, '],', tab_depth);
+
+    //typedefs
+            export_json = insert(export_json, '"typedefs":[', tab_depth);
+                tab_depth++;
+
+                    //for each class
+                var _typedef_count = Lambda.count(haxedoc.typedefs);
+                var _current_typedef = 0;
+                for(_typedef in haxedoc.typedefs) {
+                    _current_typedef++;
+                    export_json = push_typedef(export_json, _typedef, tab_depth, _current_typedef, _typedef_count);
+                } //_class
+
+                tab_depth--;
             export_json = insert(export_json, ']', tab_depth);
+
+
             tab_depth--;
         export_json = insert(export_json, '}', tab_depth );
 
@@ -141,6 +161,56 @@ class JSON {
         return export_json;
     }
 
+    static function push_typedef(export_json:String, _typedef:TypedefDoc, tab_depth:Int, _c:Int, _t:Int ) {
+
+        export_json = insert(export_json, '{ "name": "'+ _typedef.name +'",', tab_depth);
+
+//Meta
+            export_json = insert(export_json, '  "meta":[', tab_depth);
+                tab_depth++;
+
+                        //for each member
+                    var _meta_count = Lambda.count(_typedef.meta);
+                    var _current_meta = 0;
+                    for(_meta in _typedef.meta) {
+                        _current_meta++;
+                        export_json = push_meta(export_json, _meta.name, _meta.value, tab_depth, _current_meta, _meta_count);
+                    }
+
+                tab_depth--;
+            export_json = insert(export_json, '  ],', tab_depth);
+
+
+// Sub properties
+
+            tab_depth++;
+
+    //members
+                export_json = insert(export_json, '"members":[', tab_depth);
+                    tab_depth++;
+
+                            //for each member
+                        var _member_count = Lambda.count(_typedef.members);
+                        var _current_member = 0;
+                        for(_member in _typedef.members) {
+                            _current_member++;
+                            export_json = push_member(export_json, _member, tab_depth, _current_member, _member_count);
+                        }
+
+                    tab_depth--;
+                export_json = insert(export_json, '],', tab_depth);
+    //doc
+                export_json = insert(export_json, '"ispublic":' + _typedef.ispublic + ',', tab_depth);
+                export_json = insert(export_json, '"doc":"' + quote(_typedef.doc) + '",', tab_depth);
+                export_json = insert(export_json, '"alias":"' + quote(_typedef.alias) + '"', tab_depth);
+
+
+            tab_depth--;
+        export_json = insert(export_json, '}' + ((_c != _t) ? ',' : ''), tab_depth);
+
+        return export_json;
+    }
+
     static function push_meta(export_json:String, _meta:String, _value:String='', tab_depth:Int, _c:Int, _t:Int ) {
         export_json = insert(export_json, '{ "name":"'+_meta+'", "value":"'+_value+'" }' + ((_c != _t) ? ',' : ''), tab_depth);
         return export_json;
@@ -178,9 +248,9 @@ class JSON {
 
 
                 tab_depth++;
-                    export_json = insert(export_json, '"public":'       + _member.ispublic + ',', tab_depth);
-                    export_json = insert(export_json, '"inline":'       + _member.isinline + ',', tab_depth);
-                    export_json = insert(export_json, '"static":'       + _member.isstatic + ',', tab_depth);
+                    export_json = insert(export_json, '"ispublic":'       + _member.ispublic + ',', tab_depth);
+                    export_json = insert(export_json, '"isinline":'       + _member.isinline + ',', tab_depth);
+                    export_json = insert(export_json, '"isstatic":'       + _member.isstatic + ',', tab_depth);
                     export_json = insert(export_json, '"signature":"'   + _member.signature + '",', tab_depth);
                     export_json = insert(export_json, '"type":"'        + _member.type + '",', tab_depth);
                     export_json = insert(export_json, '"doc":"'         + quote(_member.doc) + '"', tab_depth);
@@ -250,9 +320,9 @@ class JSON {
 
                     //write the member values
                 tab_depth++;
-                    export_json = insert(export_json, '"public":'       + _method.ispublic + ',', tab_depth);
-                    export_json = insert(export_json, '"static":'       + _method.isstatic + ',', tab_depth);
-                    export_json = insert(export_json, '"inline":'       + _method.isinline + ',', tab_depth);
+                    export_json = insert(export_json, '"ispublic":'       + _method.ispublic + ',', tab_depth);
+                    export_json = insert(export_json, '"isstatic":'       + _method.isstatic + ',', tab_depth);
+                    export_json = insert(export_json, '"isinline":'       + _method.isinline + ',', tab_depth);
                     export_json = insert(export_json, '"doc":"'         + quote(_method.doc) + '",', tab_depth);
                     export_json = insert(export_json, '"signature":"'   + _method.signature + '",', tab_depth);
                     export_json = insert(export_json, '"return":"'      + _method.returntype + '",', tab_depth);
