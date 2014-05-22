@@ -398,7 +398,7 @@ class JSON {
                     tab_depth++;
                         for(_arg in _method.args) {
                             _current_arg++;
-                            export_json = insert(export_json, '{ "name": "'+_arg.name+'","type": "'+_arg.type+'" }' + ((_current_arg != arg_count) ? ',' : ''), tab_depth);
+                            export_json = insert(export_json, '{ "name": "'+_arg.name+'","type": "'+_arg.type+'","value": "'+_arg.value+'" }' + ((_current_arg != arg_count) ? ',' : ''), tab_depth);
                         }
                     tab_depth--;
                 export_json = insert(export_json, ']', tab_depth);

@@ -38,6 +38,7 @@ typedef MetaDoc = {
 typedef Argument = {
     var name : String;
     var type : String;
+    var value : String;
 };
 
 typedef MethodDoc = { 
@@ -528,7 +529,13 @@ class HaxeXMLDocParser {
                 if(_finfo.name == 'new') _rtype = '';
                     
             var _shortargs : Array<String> = [];
-            for(_arg in _finfo.args) { _shortargs.push(_arg.name + ':' + _arg.type); }
+            for(_arg in _finfo.args) { 
+                var _value = '';
+                if(_arg.value != '' && _arg.value != 'null' && _arg.value != null) {
+                    _value = '='+_arg.value;
+                }
+                _shortargs.push( _arg.name + ':' + _arg.type + _value); 
+            }
 
             //Store the final values
         _signature = _finfo.name + '(' + _shortargs.join(', ') + ') ' +  _rtype;
@@ -659,10 +666,15 @@ class HaxeXMLDocParser {
             //the first element has the arguments in
         var _node = _member.firstElement(); 
         var _args_list : String = _node.get('a');
+        var _args_values : String = _node.get('v');
         var _args = [];
+        var _arg_values = [];
             //if there are any, split and store them
         if(_args_list.length > 0) {
             _args = _args_list.split(':');
+            if(_args_values != null) {
+                _arg_values = _args_values.split(':');
+            }
         }
 
             //the types are stored separately... (oh but we are parsing xml...ok)
@@ -694,7 +706,7 @@ class HaxeXMLDocParser {
                     _arg_type_params += '>';
                     _arg_types.push( _arg_info.get('path') + _arg_type_params );
                 } else {
-                        //all others just store the type 
+                        //all others just store the type and if any, defaults
                     _arg_types.push( _arg_info.get('path') );
                 }                
             }
@@ -717,7 +729,17 @@ class HaxeXMLDocParser {
                 _atype = 'Dynamic';
             }
 
-            _args_final.push({ name:_args[i], type:_atype });
+            var _avalue = null;
+            if(_arg_values.length > 0) {
+                _avalue = _arg_values[i];
+                if(_avalue.length != 0) {
+                    if(_avalue.indexOf('.f') != -1) {
+                        _avalue = StringTools.replace(_avalue,'.f','0');
+                    }                    
+                }
+            }
+
+            _args_final.push({ name:_args[i], type:_atype, value:_avalue });
 
         } //for each collected argument
 
