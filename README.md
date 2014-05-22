@@ -40,31 +40,32 @@ See example_output.json for an example class output from the current version.
 ---
 Note the library is WIP (see roadmap) but is usable already.
 
-	usage : 
-	  scribe <options>
+    usage : 
+      scribe <options>
 
-	options list :
-	  version, generate, display, input, config 
+    options list :
+      version, generate, display, input, config 
 
-	options :
+    options :
 
-	  --version
-	      displays the version number
+      -version
+          displays the version number
 
-	  --generate <optional output file>
-	      generate an output file, specified in config.output or 
-	      specified as an optional output file argument.
+      -generate <optional output file>
+          generate an output file, specified in config.output or 
+          specified as an optional output file argument.
 
-	  --display
-	      if display is set and generate is set, output will be 
-	      printed to stdout instead of saved to the file.
+      -display
+          if display is set and generate is set, output will be 
+          printed to stdout instead of saved to the file.
 
-	  --input haxedoc.xml
-	      generate documentation from this file (config.input)
+      -input haxedoc.xml
+          generate documentation from this file (config.input), if the file is a special value of "scribe.types.xml" in config or here, the project will attempt to make use of the lime_project config or argument in order to generate the "scribe.types.xml" file directly from the source lime project xml file.
 
-	  --config config.json
-	      when run without this flag, scribe will look for a scribe.json in the same folder.
-	      
+      -config config.json
+          when run without this flag, scribe will look for a scribe.json in the same folder.
+      
+
 ---
 ###Roadmap
 
