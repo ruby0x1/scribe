@@ -41,6 +41,11 @@ typedef Argument = {
     var value : String;
 };
 
+typedef EnumInfo = {
+    var name : String;
+    var doc : String;
+};
+
 typedef MethodDoc = { 
     var ispublic : Bool;
     var isstatic : Bool;
@@ -59,7 +64,7 @@ typedef EnumDoc = {
     var ispublic : Bool;
     var doc : String;
     var meta : Map<String, MetaDoc>;
-    var values : Array<String>;
+    var values : Array<EnumInfo>;
 }
 
 typedef TypedefDoc = {
@@ -244,7 +249,7 @@ class HaxeXMLDocParser {
 
     static function parse_enum( _enum:Xml, config:Dynamic ) : EnumDoc {
 
-        var _values : Array<String> = [];
+        var _values : Array<EnumInfo> = [];
         var _meta_tags = _enum.elementsNamed('meta');
         
         var _isprivate : Bool = (_enum.get('private') != null);
@@ -252,8 +257,26 @@ class HaxeXMLDocParser {
         var _doc : String = '';
 
         for(_value in _enum.elements()) {
-            if(_value.nodeName != 'meta') {
-                _values.push( _value.nodeName );
+            if(_value.nodeName != 'meta' && _value.nodeName != 'haxe_doc') {
+
+                var _value_doc = '';
+                var _doc_root = _value.elementsNamed('haxe_doc');
+                if(_doc_root != null) {
+                    for(child in _doc_root) {
+                        _value_doc = Std.string( child.firstChild() );
+                        _value_doc = StringTools.replace(_value_doc,'\n','\\n');
+                    }
+                }
+
+                _values.push( { name : _value.nodeName, doc: _value_doc } );
+            }
+        }
+
+        var _doc_root = _enum.elementsNamed('haxe_doc');
+        if(_doc_root != null) {
+            for(child in _doc_root) {
+                _doc = Std.string( child.firstChild() );
+                _doc = StringTools.replace(_doc,'\n','\\n');
             }
         }
 
@@ -287,6 +310,14 @@ class HaxeXMLDocParser {
                 }
             } else if(_item.nodeName == 'c') {
                 _alias = _item.get('path');
+            }
+        }
+
+        var _doc_root = _typedef.elementsNamed('haxe_doc');
+        if(_doc_root != null) {
+            for(child in _doc_root) {
+                _doc = Std.string( child.firstChild() );
+                _doc = StringTools.replace(_doc,'\n','\\n');
             }
         }
 

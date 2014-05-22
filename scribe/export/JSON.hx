@@ -260,7 +260,7 @@ class JSON {
                     var _current_enum = 0;
                     for(_value in _enum.values) {
                         _current_enum++;
-                        export_json = insert(export_json, '"${_value}"' + ((_current_enum != _total_enums) ? ',' : ''), tab_depth);                        
+                        export_json = insert(export_json, '{ "name":"${_value.name}", "doc":"${_value.doc}" }' + ((_current_enum != _total_enums) ? ',' : ''), tab_depth);                        
                     }
 
                     tab_depth--;
