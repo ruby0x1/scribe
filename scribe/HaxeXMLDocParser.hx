@@ -98,9 +98,11 @@ class HaxeXMLDocParser {
                 //and if so add it to the list
             var _allowed = false;
             if(config.allowed_packages != null) {
+
                 if(Std.is(config.allowed_packages, String)) {
                     config.allowed_packages = config.allowed_packages.split(',');
                 }
+
                 var _allowed_packages : Array<String> = config.allowed_packages;
                 for(_allowed_package in _allowed_packages) {
                     var regex_term = '^'+ _allowed_package +'.*$';
@@ -109,9 +111,11 @@ class HaxeXMLDocParser {
                         _allowed = true;                
                     } //if there is a match
                 } //for each allowed package
+
             } else { //config.allowed_packages
                 _allowed = true;
             }
+
 
             if(_allowed) {
 
@@ -120,6 +124,7 @@ class HaxeXMLDocParser {
 
                     //finally store the ClassDoc in the list
                 _classes.set( _package, parse_class( _class, config ) );
+                
             }
 
         } //for each class        

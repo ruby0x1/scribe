@@ -131,6 +131,7 @@ class JSON {
                     tab_depth--;
                 export_json = insert(export_json, '],', tab_depth);
     //doc
+                export_json = insert(export_json, '"ispublic":' + _class.ispublic + ',', tab_depth);
                 export_json = insert(export_json, '"doc":"' + quote(_class.doc) + '"', tab_depth);
 
 
