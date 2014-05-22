@@ -267,7 +267,7 @@ class JSON {
                 export_json = insert(export_json, '],', tab_depth);
     //doc
                 export_json = insert(export_json, '"ispublic":' + _enum.ispublic + ',', tab_depth);
-                export_json = insert(export_json, '"doc":"' + quote(_enum.doc) + '",', tab_depth);
+                export_json = insert(export_json, '"doc":"' + quote(_enum.doc) + '"', tab_depth);
 
 
             tab_depth--;
