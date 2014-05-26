@@ -164,14 +164,14 @@ class Main {
         var run_args = [
             cwd + '/.scribe.last_build_flags.hxml',
             '--no-output',
-            '-xml',
-            cwd + '/scribe.types.xml'
+            '-dce', 'no',
+            '-xml', cwd + '/scribe.types.xml'
         ];
 
             //and append each as a explicit --macro include('my.package')
         for(_package in _allowed_packages) {
             run_args.push('--macro');
-            run_args.push('include("' + _package + '.*")');
+            run_args.push('include("' + _package + '")');
         }
 
         Sys.println( run_args );
