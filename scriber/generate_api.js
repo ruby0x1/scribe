@@ -93,6 +93,10 @@
             return data.replace(/\./gi, '/');
         });
  
+        // helper.bars.registerHelper('newlines', function(data) {
+        //     return data.replace(/\./gi, '/');
+        // });
+ 
         helper.bars.registerHelper('is_visible', function(obj, options) {
 
                 //hide if private

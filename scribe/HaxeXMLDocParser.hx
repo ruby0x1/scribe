@@ -579,29 +579,10 @@ class HaxeXMLDocParser {
         
         var _isprivate : Bool = (_enum.get('private') != null);
         var _meta = parse_meta_for_item( _meta_tags );
-        var _doc : String = '';
 
         for(_value in _enum.elements()) {
             if(_value.nodeName != 'meta' && _value.nodeName != 'haxe_doc') {
-
-                var _value_doc = '';
-                var _doc_root = _value.elementsNamed('haxe_doc');
-                if(_doc_root != null) {
-                    for(child in _doc_root) {
-                        _value_doc = Std.string( child.firstChild() );
-                        _value_doc = StringTools.replace(_value_doc,'\n','\\n');
-                    }
-                }
-
-                _values.push( { name : _value.nodeName, doc: _value_doc } );
-            }
-        }
-
-        var _doc_root = _enum.elementsNamed('haxe_doc');
-        if(_doc_root != null) {
-            for(child in _doc_root) {
-                _doc = Std.string( child.firstChild() );
-                _doc = StringTools.replace(_doc,'\n','\\n');
+                _values.push( { name : _value.nodeName, doc: parse_doc(_value,config) } );
             }
         }
 
@@ -612,7 +593,7 @@ class HaxeXMLDocParser {
             type_name : _enum.get('path').split('.').pop(),
             type : 'enum',
             ispublic : !_isprivate,
-            doc : _doc,
+            doc : parse_doc(_enum, config),
             meta : _meta,
             values : _values,
         };
@@ -650,14 +631,6 @@ class HaxeXMLDocParser {
             }
         }
 
-        var _doc_root = _typedef.elementsNamed('haxe_doc');
-        if(_doc_root != null) {
-            for(child in _doc_root) {
-                _doc = Std.string( child.firstChild() );
-                _doc = StringTools.replace(_doc,'\n','\\n');
-            }
-        }
-
         _members.sort(sort);
 
         return {
@@ -666,7 +639,7 @@ class HaxeXMLDocParser {
             type : 'typedef',
 
             ispublic : !_isprivate,
-            doc : _doc,
+            doc : parse_doc(_typedef, config),
             alias : _alias,
             meta : _meta,
             members : _members
@@ -751,7 +724,7 @@ class HaxeXMLDocParser {
             type:'class',
             doc: parse_doc(_class, config),
             meta: parse_meta_for_item( _class.elementsNamed('meta') ),
-            extend:_extends, 
+            extend:_extends,
             implement:_implements, 
             members:_members,
             methods:_methods,
@@ -796,7 +769,6 @@ class HaxeXMLDocParser {
         if(_doc_root != null) {
             for(child in _doc_root) {
                 _doc = Std.string( child.firstChild() );
-                _doc = StringTools.replace(_doc,'\n','\\n');
             }
         }
 
