@@ -9,13 +9,13 @@ class Main {
 
     public function new( run_path:String, args : ArgValues ) {
 
-        var config_path = 'scribe.json';
-
         old_cwd = Sys.getCwd();
         cwd = run_path;
 
         Sys.setCwd(cwd);
 
+        var config_path = 'scribe.config.json';        
+        
         if( args.has('version') && args.length == 1 ) {
             display_version(false);
             return;
@@ -30,7 +30,7 @@ class Main {
             display_version();
 
             Sys.println('- ERROR - Config path was invalid or config file is not found at ' + config_path);
-            Sys.println('-       - Use a scribe.json file in the current folder or ');
+            Sys.println('-       - Use a scribe.config.json file in the current folder or ');
             Sys.println('-       - pass the config path using -config your.config.json\n');
             
             return;
@@ -45,13 +45,10 @@ class Main {
             return;
         } //config == null
 
-            //If attempting to generate
-        if( args.has('generate') ) {
-            if(!handle_generate( args, config )) {
-                // return;
-            }
-        } // generate
+            //try and generate based on flags
+        handle_generate( args, config );
 
+            //fix changes we made 
         Sys.setCwd(old_cwd);
 
     } //new
@@ -59,11 +56,11 @@ class Main {
     static function handle_generate( args:ArgValues, config:Dynamic ) : Bool {
             
             //we must have a valid output path specified
-        var _generate_flag = args.get('generate');
+        var _output_flag = args.get('output');
 
-        if(config.output == null && _generate_flag.value.length == 0 ) {
+        if(config.output == null && _output_flag == null ) {
             display_version();
-            Sys.println('- ERROR - Output path is required in config.output or -generate outputfile.json \n');
+            Sys.println('- ERROR - Output path is required in config.output or -output outputfile.json \n');
             return false;
         }
 
@@ -83,10 +80,10 @@ class Main {
             input_file = config.input;
         }
 
-        if(_generate_flag.value.length != 0) {
-            output_file = _generate_flag.value;
+        if(_output_flag != null) {
+            output_file = _output_flag.value;
         } else {
-            output_file = (config.output != null) ? config.output : 'docs.json';
+            output_file = (config.output != null) ? config.output : 'scribe_output.json';
         }
 
         if(args.has('display')) {
@@ -139,7 +136,7 @@ class Main {
         return results;
     }
 
-    static function generate_types_xml( args:ArgValues, config:Dynamic ) : String {
+    static function generate_types_xml( args:ArgValues, config:Dynamic ) : Int {
 
             //try and generate the build flags
         var flags = generate_build_flags_hxml(args, config);
@@ -147,7 +144,7 @@ class Main {
             //warning is up higher in the flags so we 
             //can gracefully ignore
         if(flags == '') {
-            return '';
+            return -1;
         }
 
             //There are flags, we can write them to a temp file
@@ -194,7 +191,7 @@ class Main {
             //set back to running path
         Sys.setCwd(cwd);
 
-        return _results;
+        return exitcode;
 
     } //generate_types_xml
         
@@ -204,7 +201,11 @@ class Main {
         var _start_time = haxe.Timer.stamp();
             //if the input is a special file name we attempt to genrate the xml first
         if(input_file == 'scribe.types.xml') {
-            generate_types_xml( args, config );
+            var res = generate_types_xml( args, config );
+            if(res != 0) {
+                Sys.println('- Stopping in favor of errors from build command.');
+                return false;
+            }
         }
             //read the file data
         var _xml_data = '';
@@ -233,6 +234,31 @@ class Main {
             Sys.println('converted ' + input_file + ' to ' + output_file + ' in ' + _time + 's' );
         } else {
             Sys.println(json);
+        }
+
+        if(!args.has('no-output')) {
+
+            var _platform = Utils.current_platform();
+            var postfix = '';
+
+            switch(_platform) {
+                case 'windows':
+                    postfix = '-windows.exe';
+                case 'linux':
+                    postfix = '-linux64';
+                case 'mac':
+                    postfix = '-mac';
+            }
+
+            if(postfix == '') {
+                Sys.println( "- ERROR - cannot find node for platform? in scriber/node/node-" + _platform + '\n');
+                return false;
+            }
+
+            var node_path = old_cwd + 'scriber/node/node' + postfix;
+            var script_path = old_cwd + 'scriber/' + 'generate';
+
+            Utils.run(cwd, node_path, [script_path]);
         }
 
         return true;
@@ -266,12 +292,8 @@ class Main {
 
         var results = ArgParser.parse( system_args );
 
-        if(results.any) {
-            new Main( run_path, results );
-        } else {
-            Main.display_usage();
-        }
-
+        new Main( run_path, results );
+        
     } //main
 
 } //Main

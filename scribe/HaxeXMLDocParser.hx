@@ -46,6 +46,8 @@ typedef MemberDoc = {
     var signature : String;
     var type : TypeDoc;
     var name : String;
+        //this is only set if it's a typedef with optional ? var
+    var optional : Bool;
 
         //whether this is an inherited property
     var inherited : Bool;
@@ -106,7 +108,9 @@ typedef MethodDoc = {
 typedef EnumDoc = {
 
     var name : String;
+    var type_name : String;
     var type : String;
+
     var ispublic : Bool;
     var doc : String;
     var meta : Map<String, MetaDoc>;
@@ -115,31 +119,34 @@ typedef EnumDoc = {
 } //EnumDoc
 
 typedef TypedefDoc = {
+    
+    var name : String;
+    var type_name : String;
+    var type : String;
 
     var ispublic : Bool;
-        
-    var type : String;
     var doc : String;
     var meta : Map<String, MetaDoc>;
     var members : Array<MemberDoc>;
-    var name : String;
+    
     var alias : TypeDoc;
 
 } //TypedefDoc
 
 typedef ClassDoc = {
 
-    var ispublic : Bool;
-
+    var name : String;
+    var type_name : String;
     var type : String;
+
+    var ispublic : Bool;
     var doc : String;
     var meta : Map<String, MetaDoc>;
     var extend : Array<TypeDoc>;
     var implement : Array<TypeDoc>;
     var members : Array<MemberDoc>;
     var methods : Array<MethodDoc>;
-    var properties : Array<PropertyDoc>;
-    var name : String;
+    var properties : Array<PropertyDoc>;    
 
 } //ClassDoc
 
@@ -232,6 +239,7 @@ class HaxeXMLDocParser {
             isstatic : _member.isstatic,
             isinline : _member.isinline,
 
+            optional : _member.optional,
             inherited : _member.inherited,
             inherit_source : _member.inherit_source,
 
@@ -377,7 +385,8 @@ class HaxeXMLDocParser {
         if(_class != null) {
             //alias the class info
             doc.classes.set(_typedef.name, {
-                name:_typedef.name, 
+                name:_typedef.name,
+                type_name:_typedef.type_name,
                 type:'class',
                 doc: _class.doc,
                 meta: _typedef.meta,
@@ -600,6 +609,7 @@ class HaxeXMLDocParser {
 
         return {
             name : _enum.get('path'),
+            type_name : _enum.get('path').split('.').pop(),
             type : 'enum',
             ispublic : !_isprivate,
             doc : _doc,
@@ -625,6 +635,14 @@ class HaxeXMLDocParser {
                 for(_member in _item.elements()) {
                     var _parsed_member = parse_member(_member, config);
                     _parsed_member.ispublic = true;
+                    
+                        //if the member is a Null<Type> it's optional
+                    if(_parsed_member.type.name == 'Null') {
+                            //the type becomes it's params[0]
+                        _parsed_member.type = _parsed_member.type.params[0];
+                        _parsed_member.optional = true;
+                    }
+
                     _members.push( _parsed_member );
                 }
             } else if(_item.nodeName == 'c') {
@@ -644,6 +662,7 @@ class HaxeXMLDocParser {
 
         return {
             name : _typedef.get('path'),
+            type_name : _typedef.get('path').split('.').pop(),
             type : 'typedef',
 
             ispublic : !_isprivate,
@@ -728,6 +747,7 @@ class HaxeXMLDocParser {
 
         return { 
             name:_class.get('path'), 
+            type_name:_class.get('path').split('.').pop(),
             type:'class',
             doc: parse_doc(_class, config),
             meta: parse_meta_for_item( _class.elementsNamed('meta') ),
@@ -798,6 +818,7 @@ class HaxeXMLDocParser {
             isstatic : (_member.get('static') != null),
             isinline : (_member.get('get') == 'inline'),
 
+            optional : false,
             inherited : false,
             inherit_source : '',
 
@@ -1005,12 +1026,6 @@ class HaxeXMLDocParser {
             
             var _av = _arg_v.split(':');
             for(_avalue in _av) {
-                //fix float values coming through with a .f
-                if(_avalue.length != 0) {
-                    if(_avalue.indexOf('.f') != -1) {
-                        _avalue = StringTools.replace(_avalue,'.f','0');
-                    }
-                }
                 _arg_values.push(_avalue);
             }
         }
@@ -1020,11 +1035,19 @@ class HaxeXMLDocParser {
         var _index = 0;
         for(_a in _arg_names) {
 
+            var _val = _arg_values[_index];
+
+            if(args.params[0].name == 'Float') {
+                if(_val != null && _val.length > 0) { 
+                    _val = StringTools.replace(_val,'f','');
+                }
+            }
+
                 //store for use in results
             _args_final.push({ 
                 name:_arg_names[_index], 
                 type: args.params[_index], 
-                value: _arg_values[_index]
+                value: _val
             });
 
             _index++;
