@@ -422,6 +422,17 @@ class HaxeXMLDocParser {
         //class without logic (i.e data)
 
         for(_typedef in doc.typedefs) {
+
+                //first we check if the type has an explicit alias meta tag
+            var _ex_alias = _typedef.meta.get('@:alias');
+            if(_ex_alias != null) {
+                _typedef.alias = {
+                    name : _ex_alias.value,
+                    params : [],
+                    func : false
+                }
+            }
+
             if(_typedef.alias != null) {
                     //copy the type and reinsert
                 alias_fields(_typedef, doc, config);
@@ -612,10 +623,12 @@ class HaxeXMLDocParser {
             
             //for each member, parse it and store it
         for(_item in _typedef.elements()) {
+            
             if(_item.nodeName == 'a') {
+                
                 for(_member in _item.elements()) {
                     var _parsed_member = parse_member(_member, config);
-                    _parsed_member.ispublic = true;
+                        _parsed_member.ispublic = true;
                     
                         //if the member is a Null<Type> it's optional
                     if(_parsed_member.type.name == 'Null') {
@@ -625,9 +638,12 @@ class HaxeXMLDocParser {
                     }
 
                     _members.push( _parsed_member );
-                }
+                } //each child element
+
             } else if(_item.nodeName == 'c') {
+
                 _alias = parse_type(_item);
+
             }
         }
 

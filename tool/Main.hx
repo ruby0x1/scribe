@@ -203,7 +203,7 @@ class Main {
         if(input_file == 'scribe.types.xml') {
             var res = generate_types_xml( args, config );
             if(res != 0) {
-                Sys.println('- Stopping in favor of errors from build command.');
+                Sys.println('- Stopping due to errors from build command.');
                 return false;
             }
         }
