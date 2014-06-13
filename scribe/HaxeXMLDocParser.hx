@@ -14,251 +14,20 @@ import haxe.rtti.CType.TypeParams;
 import haxe.rtti.CType.TypeRoot;
 import haxe.rtti.CType.TypeTree;
 
-
-typedef PackageDoc = {
-
-        /** The name of this package */
-    var name : String;
-        /** The full package path name */
-    var full : String;
-        /** If this is an internal package ( like for a generated my.package._AbstractType ) */
-    var isPrivate : Bool;
-
-        /** The list of sub packages, for fetching from doc.packages */
-    var packages : Array<String>;
-        /** The list of classes names in this package, for fetching from doc.classes */
-    var classes : Array<String>;
-        /** The list of typedef names in this package, for fetching from doc.typedefs */
-    var typedefs : Array<String>;
-        /** The list of enum names in this package, for fetching from doc.enums */
-    var enums : Array<String>;
-        /** The list of abstract names in this package, for fetching from doc.abstracts */
-    var abstracts : Array<String>;
-
-} //PackageDoc
-
-    //helper for PathParams
-typedef PathParamDoc = {
-
-    var path : String;
-    var params : Array<CType>;
-
-} //PathParamDoc
-
-typedef ClassDoc = {
-
-        /** The doc parsed from the class declaration, if any */
-    var doc : String;
-        /** The full class path including package */
-    var path : String;
-        /** The module (file) in which this definition originated, null if standalone */
-    var module : String;
-        /** The source file on disk */
-    var file : String;
-
-        /** The meta data attached to this class, if any */
-    var meta : MetaData;
-        /** The class type parameters, if any */
-    var params : TypeParams;
-        /** The list of platforms this was generated for, if any */
-    var platforms : Array<String>;
-
-        /** The parent super class */
-    var superClass : PathParamDoc;
-        /** The interfaces this class implements if any */
-    var interfaces : Array<PathParamDoc>;
-        /** Not sure what this is yet */
-    var tdynamic : Null<CType>;
-
-        /** If this is an external class */
-    var isExtern : Bool;
-        /** If this is a private class */
-    var isPrivate : Bool;
-        /** If this is an interface declaration */
-    var isInterface : Bool;
-
-        /** The static fields of this class */
-    var statics : Array<ClassFieldDoc>;
-        /** The fields of this class, like members, methods */
-    var fields : Array<ClassFieldDoc>;
-
-} //ClassDoc
-
-typedef TypedefDoc = {
-
-    var doc : String;
-
-    var path : String;
-
-    var file : Null<String>;
-
-    var module : String;
-
-    var types : Map<String, Dynamic>;
-
-    var isPrivate : Bool;
-        /** The meta data attached to this typedef, if any */
-    var meta : MetaData;
-        /** The typedef type parameters, if any */
-    var params : TypeParams;
-        /** The list of platforms this was generated for, if any */
-    var platforms : Array<String>;
-
-    var type : Dynamic;
-
-} //TypedefDoc
-
-typedef EnumArgDoc = {
-    var name : String;
-    var t : Dynamic;
-    var opt : Bool;
-}
-
-typedef EnumFieldDoc = {
-    var platforms : Array<String>;
-    var name : String;
-    var meta : MetaData;
-    var doc : String;
-    var args : Array<EnumArgDoc>;
-}
-
-typedef EnumDoc = {
-
-    var doc : String;
-
-    var path : String;
-
-    var file : Null<String>;
-
-    var module : String;
-
-    var isExtern : Bool;
-    var isPrivate : Bool;
-        /** The meta data attached to this typedef, if any */
-    var meta : MetaData;
-        /** The typedef type parameters, if any */
-    var params : TypeParams;
-        /** The list of platforms this was generated for, if any */
-    var platforms : Array<String>;
-
-    var constructors : Array<EnumFieldDoc>;
-
-} //EnumDoc
-
-
-typedef AbstractNodeDoc = {
-    var t : Dynamic;
-    var field : Null<String>;
-}
-
-typedef AbstractDoc = {
-
-    var doc : String;
-    var path : String;
-    var file : Null<String>;
-    var module : String;
-
-        /** The meta data attached to this typedef, if any */
-    var meta : MetaData;
-        /** The typedef type parameters, if any */
-    var params : TypeParams;
-        /** The list of platforms this was generated for, if any */
-    var platforms : Array<String>;
-
-    var to : Array<AbstractNodeDoc>;
-    var from : Array<AbstractNodeDoc>;
-    var athis : Dynamic;
-    var impl : ClassDoc;
-
-} //AbstractDoc
-
-typedef ClassFieldDoc = {
-
-    var doc : String;
-    var name : String;
-    var type : Dynamic;
-
-    var line : Null<Int>;
-    var meta : MetaData;
-    var params : TypeParams;
-    var platforms : Array<String>;
-
-    var get : String;
-    var set : String;
-
-    var isPublic : Bool;
-    var isOverride : Bool;
-
-    // var overloads : Null<Array<ClassFieldDoc>>;
-
-} //ClassFieldDoc
-
-typedef CAbstractDoc = {
-    var type:String;
-    var name : String;
-    var params : Array<Dynamic>;
-}
-
-typedef CClassDoc = {
-    var type:String;
-    var name : String;
-    var params : Array<Dynamic>;
-}
-
-typedef CEnumDoc = {
-    var type:String;
-    var name : String;
-    var params : Array<Dynamic>;
-}
-
-typedef CTypedefDoc = {
-    var type:String;
-    var name : String;
-    var params : Array<Dynamic>;
-}
-
-typedef CAnonymousDoc = {
-    var type:String;
-    var fields:Array<ClassFieldDoc>;
-}
-
-typedef CDynamicDoc = {
-
-    var type:String;
-}
-
-typedef FunctionArgumentDoc = {
-    var value : String;
-    var t : Dynamic;
-    var opt : Bool;
-    var name : String;
-}
-typedef CFunctionDoc = {
-    var type:String;
-    var return_type : Dynamic;
-    var args : Array<FunctionArgumentDoc>;
-}
-
-
-typedef HaxeDoc = {
-
-    var packages : Map<String, PackageDoc>;
-    var classes : Map<String, ClassDoc>;
-    var typedefs : Map<String, TypedefDoc>;
-    var enums : Map<String, EnumDoc>;
-    var abstracts : Map<String, AbstractDoc>;
-
-} //HaxeDoc
+import scribe.ScribeTypes;
 
 class HaxeXMLDocParser {
 
     static var result : HaxeDoc;
+    static var allowed_packages : Array<String>;
 
-    public static function parse( root:Xml, config:Dynamic ) : Dynamic {
+    public static function parse( root:Xml, config:Dynamic, platform:String='cpp' ) : Dynamic {
+
+        allowed_packages = cast config.allowed_packages;
 
         var xml = new haxe.rtti.XmlParser();
 
-        xml.process(root, 'cpp');
+        xml.process( root, platform );
 
         result = {
             packages : new Map(),
@@ -280,22 +49,44 @@ class HaxeXMLDocParser {
 
     static function parse_type(type:TypeTree, _depth:Int = 0) {
 
+        var _parse = true;
+        var _count = 0;
+
         switch(type) {
 
             case TPackage( name, full, subs ):
-                parse_package( name, full, subs, _depth );
+
+                if(allowed_packages.indexOf(name) == -1) {
+                    _parse = false;
+                }
+
+                if(_parse) {
+                    parse_package( name, full, subs, _depth );
+                }
 
             case TClassdecl( _class ):
-                parse_class( _class, false, _depth );
+
+                if(in_allowed_package(_class.path)) {
+                    parse_class( _class, false, _depth );
+                }
 
             case TTypedecl( _type ):
-                parse_typedef( _type, _depth );
+
+                if(in_allowed_package(_type.path)) {
+                    parse_typedef( _type, _depth );
+                }
 
             case TEnumdecl( _enum ):
-                parse_enum( _enum, _depth );
+
+                if(in_allowed_package(_enum.path)) {
+                    parse_enum( _enum, _depth );
+                }
 
             case TAbstractdecl( _abstract ):
-                parse_abstract( _abstract, _depth );
+
+                if(in_allowed_package(_abstract.path)) {
+                    parse_abstract( _abstract, _depth );
+                }
 
             default:
 
@@ -371,8 +162,9 @@ class HaxeXMLDocParser {
             isPrivate : _class.isPrivate,
             isInterface : _class.isInterface,
 
-            fields : parse_classfields(_class.fields),
-            statics : parse_classfields(_class.statics),
+            members    : parse_class_members(_class.fields, _class.statics),
+            methods    : parse_class_methods(_class.fields, _class.statics),
+            properties : parse_class_properties(_class.fields)
 
         }
 
@@ -403,6 +195,8 @@ class HaxeXMLDocParser {
             _typemap.set(_tname, parse_ctype(_current));
         }
 
+        var _type_info = parse_ctype(_typedef.type);
+
         var typedefdoc = {
 
             doc : _typedef.doc,
@@ -416,9 +210,10 @@ class HaxeXMLDocParser {
 
             isPrivate : _typedef.isPrivate,
 
-            type : parse_ctype(_typedef.type),
+            members : (_type_info == null) ? [] : _type_info.fields,
             types : _typemap
-        }
+
+        } //typedefdoc
 
             //store in the full typedefs root map
         result.typedefs.set( _typedef.path, typedefdoc );
@@ -501,7 +296,6 @@ class HaxeXMLDocParser {
 
         var to : Array<AbstractNodeDoc>;
         var from : Array<AbstractNodeDoc>;
-        var athis : Dynamic;
 
         var _to = [];
         var _from = [];
@@ -547,40 +341,212 @@ class HaxeXMLDocParser {
 
     } //parse_abstract
 
-    static function parse_classfields( fields : List<ClassField> ) : Array<ClassFieldDoc> {
-
-        if(fields.length == 0) {
-            return [];
-        }
+    static function parse_class_members( fields : List<ClassField>, ?statics:List<ClassField>=null ) : Array<ClassFieldDoc> {
 
         var _res = [];
 
-        for(_field in fields) {
+        if(fields.length > 0) {
+            for(_field in fields) {
 
-            var _fielddoc = {
-                doc : _field.doc,
-                name : _field.name,
-                type : parse_ctype(_field.type),
+                var get_rights = parse_rights(_field.get);
+                var set_rights = parse_rights(_field.set);
 
-                line : _field.line,
-                meta : _field.meta,
-                params : _field.params,
-                platforms : Lambda.array(_field.platforms),
+                if(get_rights != 'normal') {
+                    continue;
+                }
+                if(set_rights != 'normal') {
+                    continue;
+                }
 
-                get : parse_rights(_field.get),
-                set : parse_rights(_field.set),
+                var _fielddoc = {
 
-                isPublic : _field.isPublic != null,
-                isOverride : _field.isOverride != null
-            }
+                    doc : _field.doc,
+                    name : _field.name,
+                    type : parse_ctype(_field.type),
 
-            _res.push(_fielddoc);
+                    line : _field.line,
+                    meta : _field.meta,
+                    params : _field.params,
+                    platforms : Lambda.array(_field.platforms),
 
-        }
+                    get : get_rights,
+                    set : set_rights,
+
+                    isPublic : _field.isPublic,
+                    isOverride : _field.isOverride,
+                    isStatic : false
+                }
+
+                _res.push(_fielddoc);
+
+            } //fields
+        } //length > 0
+
+        if(statics != null) {
+            if(statics.length > 0) {
+                for(_static in statics) {
+
+                    var get_rights = parse_rights(_static.get);
+                    var set_rights = parse_rights(_static.set);
+
+                    if(get_rights != 'normal') {
+                        continue;
+                    }
+                    if(set_rights != 'normal') {
+                        continue;
+                    }
+
+                    var _staticdoc = {
+
+                        doc : _static.doc,
+                        name : _static.name,
+                        type : parse_ctype(_static.type),
+
+                        line : _static.line,
+                        meta : _static.meta,
+                        params : _static.params,
+                        platforms : Lambda.array(_static.platforms),
+
+                        get : get_rights,
+                        set : set_rights,
+
+                        isPublic : _static.isPublic,
+                        isOverride : _static.isOverride,
+                        isStatic : true
+                    }
+
+                    _res.push(_staticdoc);
+
+                } //statics
+            } //length > 0
+        } //statics != null
 
         return _res;
 
-    } //parse_classfields
+    } //parse_class_members
+
+    static function parse_class_methods( fields : List<ClassField>, ?statics:List<ClassField>=null ) : Array<ClassFieldDoc> {
+
+        var _res = [];
+
+        if(fields.length > 0) {
+            for(_field in fields) {
+
+                var set_rights = parse_rights(_field.set);
+
+                if(set_rights != 'method') {
+                    continue;
+                }
+
+                var _fielddoc = {
+
+                    doc : _field.doc,
+                    name : _field.name,
+                    type : parse_ctype(_field.type),
+
+                    line : _field.line,
+                    meta : _field.meta,
+                    params : _field.params,
+                    platforms : Lambda.array(_field.platforms),
+
+                    get : parse_rights(_field.get),
+                    set : set_rights,
+
+                    isPublic : _field.isPublic,
+                    isOverride : _field.isOverride,
+                    isStatic : false
+                }
+
+                _res.push(_fielddoc);
+
+            } //fields
+        } //length > 0
+
+        if(statics != null) {
+            if(statics.length > 0) {
+                for(_static in statics) {
+
+                    var set_rights = parse_rights(_static.set);
+
+                    if(set_rights != 'method') {
+                        continue;
+                    }
+
+                    var _staticdoc = {
+
+                        doc : _static.doc,
+                        name : _static.name,
+                        type : parse_ctype(_static.type),
+
+                        line : _static.line,
+                        meta : _static.meta,
+                        params : _static.params,
+                        platforms : Lambda.array(_static.platforms),
+
+                        get : parse_rights(_static.get),
+                        set : set_rights,
+
+                        isPublic : _static.isPublic,
+                        isOverride : _static.isOverride,
+                        isStatic : true
+                    }
+
+                    _res.push(_staticdoc);
+
+                } //statics
+            } //length > 0
+        } //statics != null
+
+        return _res;
+
+    } //parse_class_members
+
+    static function parse_class_properties( fields : List<ClassField> ) : Array<ClassFieldDoc> {
+
+        var _res = [];
+
+        if(fields.length > 0) {
+            for(_field in fields) {
+
+                var get_rights = parse_rights(_field.get);
+                var set_rights = parse_rights(_field.set);
+
+                if(set_rights == 'method') {
+                    continue;
+                }
+
+                if(get_rights == 'normal' && set_rights == 'normal') {
+                    continue;
+                }
+
+                var _fielddoc = {
+
+                    doc : _field.doc,
+                    name : _field.name,
+                    type : parse_ctype(_field.type),
+
+                    line : _field.line,
+                    meta : _field.meta,
+                    params : _field.params,
+                    platforms : Lambda.array(_field.platforms),
+
+                    get : get_rights,
+                    set : set_rights,
+
+                    isPublic : _field.isPublic,
+                    isOverride : _field.isOverride,
+                    isStatic : false
+                }
+
+                _res.push(_fielddoc);
+
+            } //fields
+        } //length > 0
+
+        return _res;
+
+    } //parse_class_properties
+
 
     static function parse_rights( _rights:Rights ) : String {
 
@@ -604,7 +570,7 @@ class HaxeXMLDocParser {
 
     } //parse_rights
 
-    static function parse_ctype( _type:CType ) : Dynamic {
+    static function parse_ctype( _type:CType ) : CTypeDoc {
 
         if(_type == null) {
             return null;
@@ -636,7 +602,7 @@ class HaxeXMLDocParser {
 
     } //parse_ctype
 
-    static function parse_ctype_list( list:List<CType> ) : Array<Dynamic> {
+    static function parse_ctype_list( list:List<CType> ) : Array<CTypeDoc> {
 
         if(list.length == 0) {
             return [];
@@ -652,7 +618,7 @@ class HaxeXMLDocParser {
     } //parse_ctype_list
 
 
-    static function parse_cabstract( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CAbstractDoc {
+    static function parse_cabstract( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CTypeDoc {
         return {
             type : 'CAbstract',
             name : name,
@@ -660,7 +626,7 @@ class HaxeXMLDocParser {
         };
     } //parse_cabstract
 
-    static function parse_cclass( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CClassDoc {
+    static function parse_cclass( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CTypeDoc {
         return {
             type:'CClass',
             name:name,
@@ -668,7 +634,7 @@ class HaxeXMLDocParser {
         };
     } //parse_cclass
 
-    static function parse_cenum( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CEnumDoc {
+    static function parse_cenum( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CTypeDoc {
         return {
             type:'CEnum',
             name:name,
@@ -676,7 +642,7 @@ class HaxeXMLDocParser {
         };
     } //parse_cenum
 
-    static function parse_ctypedef( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CTypedefDoc {
+    static function parse_ctypedef( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CTypeDoc {
         return {
             type:'CTypedef',
             name:name,
@@ -684,14 +650,14 @@ class HaxeXMLDocParser {
         };
     } //parse_ctypedef
 
-    static function parse_canonymous( fields : List<haxe.rtti.ClassField> ) {
+    static function parse_canonymous( fields : List<haxe.rtti.ClassField> ) : CTypeDoc {
         return {
             type:'CAnonymous',
-            fields : parse_classfields(fields)
+            fields : parse_class_members(fields)
         };
     } //parse_canonymous
 
-    static function parse_cfunction( args : List<haxe.rtti.FunctionArgument> , ret : CType ) {
+    static function parse_cfunction( args : List<haxe.rtti.FunctionArgument> , ret : CType ) : CTypeDoc {
 
         var _args = [];
 
@@ -714,19 +680,38 @@ class HaxeXMLDocParser {
 
     } //parse_cfunction
 
-    static function parse_cunknown( _type:CType ) : CType {
+    static function parse_cunknown( _type:CType ) : CTypeDoc {
 
-        return _type;
+        return {
+            type:'CUnknown'
+        };
+
     } //parse_cunknown
 
-    static function parse_cdynamic(  ?t : CType ) {
+    static function parse_cdynamic(  ?t : CType ) : CTypeDoc {
 
-        return parse_ctype(t);
+        return {
+            type : 'CDynamic'
+        }
+
     } //parse_cdynamic
 
 
 //Helpers
 
+    static function in_allowed_package( _path:String ) : Bool {
+
+        var _count = 0;
+
+            allowed_packages.map(function(_p:String){
+                if(_path.indexOf('${_p}.') != -1) {
+                    _count++;
+                }
+            });
+
+        return _count > 0;
+
+    } //in_allowed_package
 
     static function get_pathparams_list( _l : List<PathParams> ) : Array<PathParamDoc> {
         var _res = [];
@@ -762,7 +747,7 @@ class HaxeXMLDocParser {
     } //tabs
 
     static function _verbose(v:Dynamic) {
-        trace(v);
+        // trace(v);
     } //_verbose
 
 } //HaxeXMLDocParser

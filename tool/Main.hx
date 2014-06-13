@@ -156,6 +156,9 @@ class Main {
         }
             //so store them in an array
         var _allowed_packages : Array<String> = config.allowed_packages;
+            _allowed_packages.map(function(_p:String){
+                return _p = StringTools.trim(_p);
+            });
 
             //now we construct our arguments for generating the xml type file
         var run_args = [
