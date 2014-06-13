@@ -14,8 +14,8 @@ class Main {
 
         Sys.setCwd(cwd);
 
-        var config_path = 'scribe.config.json';        
-        
+        var config_path = 'scribe.config.json';
+
         if( args.has('version') && args.length == 1 ) {
             display_version(false);
             return;
@@ -32,7 +32,7 @@ class Main {
             Sys.println('- ERROR - Config path was invalid or config file is not found at ' + config_path);
             Sys.println('-       - Use a scribe.config.json file in the current folder or ');
             Sys.println('-       - pass the config path using -config your.config.json\n');
-            
+
             return;
 
         } // config_path
@@ -48,13 +48,13 @@ class Main {
             //try and generate based on flags
         handle_generate( args, config );
 
-            //fix changes we made 
+            //fix changes we made
         Sys.setCwd(old_cwd);
 
     } //new
 
     static function handle_generate( args:ArgValues, config:Dynamic ) : Bool {
-            
+
             //we must have a valid output path specified
         var _output_flag = args.get('output');
 
@@ -95,7 +95,7 @@ class Main {
             Sys.println('- ERROR - Cannot override ' + output_file + ' without -force or config.force = true');
             return false;
         }
-        
+
         return do_generate( args, config, input_file, output_file );
 
     } //handle_generate
@@ -124,7 +124,7 @@ class Main {
 
         var run_args = [
             'display',
-            config.__project_path, 
+            config.__project_path,
             Utils.current_platform()
         ];
 
@@ -141,7 +141,7 @@ class Main {
             //try and generate the build flags
         var flags = generate_build_flags_hxml(args, config);
 
-            //warning is up higher in the flags so we 
+            //warning is up higher in the flags so we
             //can gracefully ignore
         if(flags == '') {
             return -1;
@@ -194,7 +194,7 @@ class Main {
         return exitcode;
 
     } //generate_types_xml
-        
+
     static function do_generate( args:ArgValues, config:Dynamic, input_file:String, output_file:String ) : Bool {
 
             //to measure how long
@@ -276,7 +276,7 @@ class Main {
 
     } //display_version
 
-    public static function display_usage() { 
+    public static function display_usage() {
 
         display_version();
         Sys.println( haxe.Resource.getString("usage") );
@@ -293,7 +293,7 @@ class Main {
         var results = ArgParser.parse( system_args );
 
         new Main( run_path, results );
-        
+
     } //main
 
 } //Main
