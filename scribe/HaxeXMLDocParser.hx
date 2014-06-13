@@ -1,1063 +1,681 @@
 
 package scribe;
 
-typedef PropertyDoc = { 
+import haxe.rtti.CType;
+import haxe.rtti.CType.Abstractdef;
+import haxe.rtti.CType.Classdef;
+import haxe.rtti.CType.ClassField;
+import haxe.rtti.CType.Enumdef;
+import haxe.rtti.CType.MetaData;
+import haxe.rtti.CType.PathParams;
+import haxe.rtti.CType.Platforms;
+import haxe.rtti.CType.Typedef;
+import haxe.rtti.CType.TypeParams;
+import haxe.rtti.CType.TypeRoot;
+import haxe.rtti.CType.TypeTree;
 
-    var isread : Bool;
-    var iswrite : Bool;
-    var ispublic : Bool;
-    var isstatic : Bool;
 
-    var doc : String;
-    var meta : Map<String, MetaDoc>;
-    var signature : String;
-    var type : TypeDoc;
-    var access : String;
+typedef PackageDoc = {
+
+        /** The name of this package */
     var name : String;
-        
-        //whether this is an inherited property
-    var inherited : Bool;
-        //the place this was inherited from, if any
-    var inherit_source : String;
+        /** The full package path name */
+    var full : String;
+        /** If this is an internal package ( like for a generated my.package._AbstractType ) */
+    var isPrivate : Bool;
 
-} //PropertyDoc
+        /** The list of sub packages, for fetching from doc.packages */
+    var packages : Array<String>;
+        /** The list of classes names in this package, for fetching from doc.classes */
+    var classes : Array<String>;
+        /** The list of typedef names in this package, for fetching from doc.typedefs */
+    var typedefs : Array<String>;
+        /** The list of enum names in this package, for fetching from doc.enums */
+    var enums : Array<String>;
+        /** The list of abstract names in this package, for fetching from doc.abstracts */
+    var abstracts : Array<String>;
 
-typedef TypeDoc = {
+} //PackageDoc
 
-        //the base name of the type, like "Map" or com.package.Blah
-    var name : String;  
-        //if this type has parameters, they are in here
-    var params : Array<TypeDoc>;
-        //if this type is a function declaration, 
-        //it's set to true, and params stores the type information
-        //and name holds the function signature instead
-    var func : Bool;
+    //helper for PathParams
+typedef PathParamDoc = {
 
-} //TypeDoc
+    var path : String;
+    var params : Array<CType>;
 
-typedef MemberDoc = {
-
-    var ispublic : Bool;
-    var isstatic : Bool;
-    var isinline : Bool;
-
-    var doc : String;
-    var meta : Map<String, MetaDoc>;
-    var signature : String;
-    var type : TypeDoc;
-    var name : String;
-        //this is only set if it's a typedef with optional ? var
-    var optional : Bool;
-
-        //whether this is an inherited property
-    var inherited : Bool;
-        //the place this was inherited from, if any
-    var inherit_source : String;
-
-} //MemberDoc
-
-typedef UnknownDoc = {
-
-    var name : String;
-    var node : Xml; 
-
-} //UnknownDoc
-
-typedef MetaDoc = {
-
-    var name : String;
-    var value : String;
-
-} //MetaDoc
-
-typedef Argument = {
-
-    var name : String;
-    var type : TypeDoc;
-    var value : String;
-
-} //Argument
-
-typedef EnumInfo = {
-
-    var name : String;
-    var doc : String;
-
-} //EnumInfo
-
-typedef MethodDoc = { 
-
-    var ispublic : Bool;
-    var isstatic : Bool;
-    var isinline : Bool;    
-
-    var doc : String;
-    var meta : Map<String, MetaDoc>;
-    var signature : String;
-    var args : Array<Argument>;
-    var return_type : TypeDoc;
-    var name : String;
-
-        //whether this is an inherited property
-    var inherited : Bool;
-        //the place this was inherited from, if any
-    var inherit_source : String;
-
-} //MethodDoc
-
-typedef EnumDoc = {
-
-    var name : String;
-    var type_name : String;
-    var type : String;
-
-    var ispublic : Bool;
-    var doc : String;
-    var meta : Map<String, MetaDoc>;
-    var values : Array<EnumInfo>;
-
-} //EnumDoc
-
-typedef TypedefDoc = {
-    
-    var name : String;
-    var type_name : String;
-    var type : String;
-
-    var ispublic : Bool;
-    var doc : String;
-    var meta : Map<String, MetaDoc>;
-    var members : Array<MemberDoc>;
-    
-    var alias : TypeDoc;
-
-} //TypedefDoc
+} //PathParamDoc
 
 typedef ClassDoc = {
 
-    var name : String;
-    var type_name : String;
-    var type : String;
-
-    var ispublic : Bool;
+        /** The doc parsed from the class declaration, if any */
     var doc : String;
-    var meta : Map<String, MetaDoc>;
-    var extend : Array<TypeDoc>;
-    var implement : Array<TypeDoc>;
-    var members : Array<MemberDoc>;
-    var methods : Array<MethodDoc>;
-    var properties : Array<PropertyDoc>;    
+        /** The full class path including package */
+    var path : String;
+        /** The module (file) in which this definition originated, null if standalone */
+    var module : String;
+        /** The source file on disk */
+    var file : String;
+
+        /** The meta data attached to this class, if any */
+    var meta : MetaData;
+        /** The class type parameters, if any */
+    var params : TypeParams;
+        /** The list of platforms this was generated for, if any */
+    var platforms : Array<String>;
+
+        /** The parent super class */
+    var superClass : PathParamDoc;
+        /** The interfaces this class implements if any */
+    var interfaces : Array<PathParamDoc>;
+        /** Not sure what this is yet */
+    var tdynamic : Null<CType>;
+
+        /** If this is an external class */
+    var isExtern : Bool;
+        /** If this is a private class */
+    var isPrivate : Bool;
+        /** If this is an interface declaration */
+    var isInterface : Bool;
+
+        /** The static fields of this class */
+    var statics : Array<ClassFieldDoc>;
+        /** The fields of this class, like members, methods */
+    var fields : Array<ClassFieldDoc>;
 
 } //ClassDoc
 
+typedef TypedefDoc = {
+
+    var doc : String;
+
+    var path : String;
+
+    var file : Null<String>;
+
+    var module : String;
+
+    var types : Map<String, Dynamic>;
+
+    var isPrivate : Bool;
+        /** The meta data attached to this typedef, if any */
+    var meta : MetaData;
+        /** The typedef type parameters, if any */
+    var params : TypeParams;
+        /** The list of platforms this was generated for, if any */
+    var platforms : Array<String>;
+
+    var type : Dynamic;
+
+} //TypedefDoc
+
+typedef EnumArgDoc = {
+    var name : String;
+    var t : Dynamic;
+    var opt : Bool;
+}
+
+typedef EnumFieldDoc = {
+    var platforms : Array<String>;
+    var name : String;
+    var meta : MetaData;
+    var doc : String;
+    var args : Array<EnumArgDoc>;
+}
+
+typedef EnumDoc = {
+
+    var doc : String;
+
+    var path : String;
+
+    var file : Null<String>;
+
+    var module : String;
+
+    var isExtern : Bool;
+    var isPrivate : Bool;
+        /** The meta data attached to this typedef, if any */
+    var meta : MetaData;
+        /** The typedef type parameters, if any */
+    var params : TypeParams;
+        /** The list of platforms this was generated for, if any */
+    var platforms : Array<String>;
+
+    var constructors : Array<EnumFieldDoc>;
+
+} //EnumDoc
+
+typedef ClassFieldDoc = {
+
+    var doc : String;
+    var name : String;
+    var type : Dynamic;
+
+    var line : Null<Int>;
+    var meta : MetaData;
+    var params : TypeParams;
+    var platforms : Array<String>;
+
+    var get : String;
+    var set : String;
+
+    var isPublic : Bool;
+    var isOverride : Bool;
+
+    // var overloads : Null<Array<ClassFieldDoc>>;
+
+} //ClassFieldDoc
+
+typedef CAbstractDoc = {
+    var type:String;
+    var name : String;
+    var params : Array<Dynamic>;
+}
+
+typedef CClassDoc = {
+    var type:String;
+    var name : String;
+    var params : Array<Dynamic>;
+}
+
+typedef CEnumDoc = {
+    var type:String;
+    var name : String;
+    var params : Array<Dynamic>;
+}
+
+typedef CTypedefDoc = {
+    var type:String;
+    var name : String;
+    var params : Array<Dynamic>;
+}
+
+typedef CAnonymousDoc = {
+    var type:String;
+    var fields:Array<ClassFieldDoc>;
+}
+
+typedef CDynamicDoc = {
+    var type:String;
+}
+
+typedef FunctionArgumentDoc = {
+    var value : String;
+    var t : Dynamic;
+    var opt : Bool;
+    var name : String;
+}
+typedef CFunctionDoc = {
+    var type:String;
+    var return_type : Dynamic;
+    var args : Array<FunctionArgumentDoc>;
+}
+
+
 typedef HaxeDoc = {
 
-        //the list of typed items for 
+    var packages : Map<String, PackageDoc>;
     var classes : Map<String, ClassDoc>;
     var typedefs : Map<String, TypedefDoc>;
     var enums : Map<String, EnumDoc>;
-        //the list of names for each type
-    var class_list : Array<String>;
-    var typedef_list : Array<String>;
-    var enum_list : Array<String>;
-
-        //full list for export convenience,
-        //populated last to avoid disparity
-    var types : Map<String, Dynamic>;
-    var typelist : Array<String>;
+    // var abstracts : Map<String, AbstractDoc>;
 
 } //HaxeDoc
 
-//Internal typedefs
-
-private typedef InternalMethodInfo = {
-
-    var name : String;
-    var args : Array<Argument>;
-    var return_type : TypeDoc;
-    var params : Array<String>;
-
-}
-
 class HaxeXMLDocParser {
 
-    public static function parse( root:Xml, config:Dynamic ) : HaxeDoc {
+    static var result : HaxeDoc;
 
-            //first we parse the base types into the lists,
-        var doc = pre_parse(root, config);
+    public static function parse( root:Xml, config:Dynamic ) : Dynamic {
 
-            //and then we post process them to merge inheritance, aliases etc
-        doc = post_parse(doc, config);
+        var xml = new haxe.rtti.XmlParser();
 
-            //and finally we merge them all into the final list
-        for(_class in doc.classes) {
-            doc.types.set(_class.name, _class);
+        xml.process(root, 'cpp');
+
+        result = {
+            packages : new Map(),
+            classes : new Map(),
+            typedefs : new Map(),
+            enums : new Map(),
+        };
+
+        _verbose('parsing ...');
+
+        for(entry in xml.root) {
+            parse_type(entry);
         }
 
-        for(_typedef in doc.typedefs) {
-            doc.types.set(_typedef.name, _typedef);
-        }
-
-        for(_enum in doc.enums) {
-            doc.types.set(_enum.name, _enum);
-        }
-
-            //and merge the names
-        doc.typelist = doc.typelist.concat(doc.class_list);
-        doc.typelist = doc.typelist.concat(doc.enum_list);
-        doc.typelist = doc.typelist.concat(doc.typedef_list);
-
-            //sort them
-        doc.typelist.sort(sort_plain);
-
-        return doc;
+        return result;
 
     } //parse
 
-    static function _clone_method(_method:MethodDoc) : MethodDoc {
-        return {
-            ispublic : _method.ispublic,
-            isstatic : _method.isstatic,
-            isinline : _method.isinline,
+    static function parse_type(type:TypeTree, _depth:Int = 0) {
 
-            inherited : _method.inherited,
-            inherit_source : _method.inherit_source,
-
-            doc : _method.doc,
-            meta : _method.meta,
-            signature : _method.signature,
-            args : _method.args.copy(),
-            return_type : _method.return_type,
-            name : _method.name
-        };
-    } //_clone_method
-
-    static function _clone_member(_member:MemberDoc) : MemberDoc {
-
-        return {
-            ispublic : _member.ispublic,
-            isstatic : _member.isstatic,
-            isinline : _member.isinline,
-
-            optional : _member.optional,
-            inherited : _member.inherited,
-            inherit_source : _member.inherit_source,
-
-            doc : _member.doc,
-            meta : _member.meta,
-            signature : _member.signature,
-            type : _member.type,
-            name : _member.name
-        };
-    } //_clone_member
-
-    static function _clone_property(_property:PropertyDoc) : PropertyDoc {
-
-        return {
-            isread : _property.isread,
-            iswrite : _property.iswrite,
-            isstatic : _property.isstatic,
-            ispublic : _property.ispublic,
-
-            inherited : _property.inherited,
-            inherit_source : _property.inherit_source,
-
-            doc : _property.doc,
-            meta : _property.meta,
-            signature : _property.signature,
-            type : _property.type,
-            access : _property.access,
-            name : _property.name
-        };
-    } //_clone_property
-
-    static function inherit_fields(_class:ClassDoc, doc:HaxeDoc, config:Dynamic) {
-            
-        //for each class this one inherits
-        for(_parent_type in _class.extend) {
-                //obtain its info
-            var _parent = doc.classes.get(_parent_type.name);
-
-                //classes from the std lib and 
-                //excluded packages don't exist here
-                //so we skip them entirely
-            if(_parent == null) {
-                continue;
-            }
-            
-                //now, for each method, member and property
-                //we want to selectively merge things down into 
-                //this class, if the parent has a method this
-                //class does not, we push it in here, and flag it inherited.
-                //if this class has it, we just flagged it as inherited and set the source.
-                //This happens recursively, so that parents at the top tier are set as the source
-            if(_parent.extend.length == 0) {
-                    //for each method
-                for(_method in _parent.methods) {
-                        //if exists in the child, flag it as inherited
-                    var _in_child = Lambda.exists(_class.methods, function(m){ 
-                        return m.name == _method.name;
-                    });
-
-                    if( _in_child ) {
-                        Lambda.filter(_class.methods, function(m){
-                            if(m.name == _method.name) {
-                                m.inherited = true;
-                                m.inherit_source = _parent.name;
-                                return true;
-                            }
-                            return false;
-                        });
-                    } else {
-                            //if it doesn't exist in the child, we need to add it
-                        var _cm = _clone_method(_method);
-                            _cm.inherited = true;
-                            _cm.inherit_source = _parent.name;
-                        _class.methods.push(_cm);
-                    }
-                } //for each method
-        
-                    //for each members
-                for(_member in _parent.members) {
-                        //if exists in the child, flag it as inherited
-                    var _in_child = Lambda.exists(_class.members, function(m){ 
-                        return m.name == _member.name;
-                    });
-
-                    if( _in_child ) {
-                        Lambda.filter(_class.members, function(m){
-                            if(m.name == _member.name) {
-                                m.inherited = true;
-                                m.inherit_source = _parent.name;
-                                return true;
-                            }
-                            return false;
-                        });
-                    } else {
-                            //if it doesn't exist in the child, we need to add it
-                        var _cm = _clone_member(_member);
-                            _cm.inherited = true;
-                            _cm.inherit_source = _parent.name;
-                        _class.members.push(_cm);
-                    }
-                } //for each member
-
-                    //for each property
-                for(_property in _parent.properties) {
-                        //if exists in the child, flag it as inherited
-                    var _in_child = Lambda.exists(_class.properties, function(m){ 
-                        return m.name == _property.name;
-                    });
-
-                    if( _in_child ) {
-                        Lambda.filter(_class.properties, function(m){
-                            if(m.name == _property.name) {
-                                m.inherited = true;
-                                m.inherit_source = _parent.name;
-                                return true;
-                            }
-                            return false;
-                        });
-                    } else {
-                            //if it doesn't exist in the child, we need to add it
-                        var _cm = _clone_property(_property);
-                            _cm.inherited = true;
-                            _cm.inherit_source = _parent.name;
-                        _class.properties.push(_cm);
-                    }
-                } //for each property
-
-            } else {
-                inherit_fields(_parent, doc, config);
-            }
+        switch(type) {
+            case TPackage( name, full, subs ):
+                parse_package( name, full, subs, _depth );
+            case TClassdecl( _class ):
+                parse_class( _class, _depth );
+            case TTypedecl( _type ):
+                parse_typedef( _type, _depth );
+            case TEnumdecl( _enum ):
+                parse_enum( _enum, _depth );
+            case TAbstractdecl( _abstract ):
+                parse_abstract( _abstract, _depth );
+            default:
         }
-    }
-
-    static function alias_fields( _typedef:TypedefDoc, doc:HaxeDoc, config:Dynamic ) : Void {
-    
-        // trace("found typedef " + _typedef.name + ' to ' + type_doc_to_string(_typedef.alias));
-
-        //check if the type is found as a class, typedef or enum
-        var _class = doc.classes.get(_typedef.alias.name);
-        var _td = doc.enums.get(_typedef.alias.name);
-        var _enum = doc.enums.get(_typedef.alias.name);
-
-        if(_class != null) {
-            //alias the class info
-            doc.classes.set(_typedef.name, {
-                name:_typedef.name,
-                type_name:_typedef.type_name,
-                type:'class',
-                doc: _class.doc,
-                meta: _typedef.meta,
-                extend:_class.extend,
-                implement:_class.implement, 
-                members:_class.members,
-                methods:_class.methods,
-                properties:_class.properties, 
-                ispublic:_typedef.ispublic
-            });
-        }
-        
-        if(_td != null) {
-            trace('its a typedef! todo!');
-        }
-        
-        if(_enum != null) {
-            trace('its an enum! todo!');
-        }
-    }
-
-    static function post_parse( doc:HaxeDoc, config:Dynamic ) : HaxeDoc {
-
-        //for classes, if they inherit something, they should be merged in.
-        //this happens first, because aliases to classes will get full details then
-
-        for(_class in doc.classes) {
-            inherit_fields(_class, doc, config);
-        }
-
-        //typedefs can be complete aliases to a different type, so we populate the aliases 
-        //with the information from the target type, so that the documentation information is complete on that 
-        //class without logic (i.e data)
-
-        for(_typedef in doc.typedefs) {
-
-                //first we check if the type has an explicit alias meta tag
-            var _ex_alias = _typedef.meta.get('@:alias');
-            if(_ex_alias != null) {
-                _typedef.alias = {
-                    name : _ex_alias.value,
-                    params : [],
-                    func : false
-                }
-            }
-
-            if(_typedef.alias != null) {
-                    //copy the type and reinsert
-                alias_fields(_typedef, doc, config);
-                    //if the typedef is an alias, we remove this typedef out entirely, and place an instance
-                    //of it's alias in the correct place, like if T aliases a _class_ T1, classes['T'] becomes a copy of T1
-                doc.typedefs.remove(_typedef.name);
-            }
-        }
-
-        return doc;
-
-    } //post_parse
-
-    static function pre_parse( root:Xml, config:Dynamic ) : HaxeDoc {
-
-        var _class_list : Array<String> = [];
-        var _typedef_list : Array<String> = [];
-        var _enum_list : Array<String> = [];
-
-        var _classes : Map<String, ClassDoc> = new Map<String,ClassDoc>();
-        var _typedefs : Map<String, TypedefDoc> = new Map<String, TypedefDoc>();
-        var _enums : Map<String, EnumDoc> = new Map<String, EnumDoc>();
-
-        for(_class in root.elementsNamed('class')) {
-
-            var _package = _class.get('path');
-            
-                //check that the class is in the allowed packages,
-                //and if so add it to the list
-            var _allowed = package_allowed(config, _package);
-
-            if(_allowed) {
-                    //store the class in the list of names
-                _class_list.push( _package );
-                    //finally store the ClassDoc in the list
-                _classes.set( _package, parse_class( _class, config ) );
-            }
-
-        } //for each class      
-
-        for(_typedef in root.elementsNamed('typedef')) {
-
-            var _package = _typedef.get('path');
-
-                //check that the class is in the allowed packages,
-                //and if so add it to the list
-            var _allowed = package_allowed(config, _package);
-
-            if(_allowed) {
-                    //store the class in the list of names
-                _typedef_list.push( _package );
-                    //finally store the Doc in the list
-                _typedefs.set( _package, parse_typedef( _typedef, config ) );
-            }
-
-        } //for each typedef 
-
-        for(_enum in root.elementsNamed('enum')) {
-
-            var _package = _enum.get('path');
-
-                //check that the class is in the allowed packages,
-                //and if so add it to the list
-            var _allowed = package_allowed(config, _package);
-
-            if(_allowed) {
-                    //store the class in the list of names
-                _enum_list.push( _package );
-                    //finally store the Doc in the list
-                _enums.set( _package, parse_enum( _enum, config ));
-            }
-
-        } //for each enum
-
-        return { 
-            class_list :_class_list, 
-            classes :_classes,
-
-            typedef_list :_typedef_list,
-            typedefs :_typedefs,
-
-            enum_list :_enum_list,
-            enums :_enums,
-
-            types : new Map(),
-            typelist : []
-        };        
-
-    } //pre_parse
-
-    static function package_allowed(config:Dynamic, _package:String) {
-        
-        var _allowed = false;
-
-        if(config.allowed_packages != null) {
-
-            if(Std.is(config.allowed_packages, String)) {
-                config.allowed_packages = config.allowed_packages.split(',');
-            }
-
-            var _allowed_packages : Array<String> = config.allowed_packages;
-            for(_allowed_package in _allowed_packages) {
-                var regex_term = '^'+ _allowed_package +'.*$';
-                var regex = new EReg(regex_term, 'gim');
-                if(regex.match(_package)) {
-                    _allowed = true;                
-                } //if there is a match
-            } //for each allowed package
-
-        } else { //config.allowed_packages
-            _allowed = true;
-        }
-
-        return _allowed;
-
-    } //package_allowed
-
-    static function parse_meta_for_item( _meta_tags:Iterator<Xml> ) {
-
-        var _meta = new Map<String, MetaDoc>();
-
-        if(_meta_tags != null) {
-            for(_child in _meta_tags) {
-                var _meta_elements = _child.elements();
-                for(_meta_item in _meta_elements) {
-
-                    var _meta_value = '';
-                    var _value_node = _meta_item.elementsNamed("e");
-
-                    if(_value_node.hasNext()) {
-                        _meta_value = Std.string( _value_node.next().firstChild() );
-                    }
-                        //for now we have to remove the quotes from strings, 
-                        //not sure if that's gonna cause possible headaches but 
-                        //worth looking into
-
-                    var _meta_name = Std.string(_meta_item.get('n'));
-                    _meta.set( '@'+_meta_name, {
-                        name : _meta_name, 
-                        value : StringTools.replace(_meta_value, '"','')
-                    });
-
-                } //for meta in _meta_elements
-            } //for child in meta_tags
-        } //if meta tags != null
-
-        return _meta;
-
-    } //parse_meta_for_item
-
-    static function parse_enum( _enum:Xml, config:Dynamic ) : EnumDoc {
-
-        var _values : Array<EnumInfo> = [];
-        var _meta_tags = _enum.elementsNamed('meta');
-        
-        var _isprivate : Bool = (_enum.get('private') != null);
-        var _meta = parse_meta_for_item( _meta_tags );
-
-        for(_value in _enum.elements()) {
-            if(_value.nodeName != 'meta' && _value.nodeName != 'haxe_doc') {
-                _values.push( { name : _value.nodeName, doc: parse_doc(_value,config) } );
-            }
-        }
-
-        _values.sort(sort);
-
-        return {
-            name : _enum.get('path'),
-            type_name : _enum.get('path').split('.').pop(),
-            type : 'enum',
-            ispublic : !_isprivate,
-            doc : parse_doc(_enum, config),
-            meta : _meta,
-            values : _values,
-        };
-
-    } //parse_enum
-
-    static function parse_typedef( _typedef:Xml, config:Dynamic ) : TypedefDoc {
-
-        var _members = [];
-        var _meta_tags = _typedef.elementsNamed('meta');
-        var _isprivate : Bool = (_typedef.get('private') != null);
-
-        var _meta = parse_meta_for_item( _meta_tags );
-        var _doc = '';
-        var _alias : TypeDoc = null;
-            
-            //for each member, parse it and store it
-        for(_item in _typedef.elements()) {
-            
-            if(_item.nodeName == 'a') {
-                
-                for(_member in _item.elements()) {
-                    var _parsed_member = parse_member(_member, config);
-                        _parsed_member.ispublic = true;
-                    
-                        //if the member is a Null<Type> it's optional
-                    if(_parsed_member.type.name == 'Null') {
-                            //the type becomes it's params[0]
-                        _parsed_member.type = _parsed_member.type.params[0];
-                        _parsed_member.optional = true;
-                    }
-
-                    _members.push( _parsed_member );
-                } //each child element
-
-            } else if(_item.nodeName == 'c') {
-
-                _alias = parse_type(_item);
-
-            }
-        }
-
-        _members.sort(sort);
-
-        return {
-            name : _typedef.get('path'),
-            type_name : _typedef.get('path').split('.').pop(),
-            type : 'typedef',
-
-            ispublic : !_isprivate,
-            doc : parse_doc(_typedef, config),
-            alias : _alias,
-            meta : _meta,
-            members : _members
-        };
-
-    } //parse_typedef
-
-    public static function sort(a:Dynamic,b:Dynamic) {
-        if(Std.string(a.name).toLowerCase() < Std.string(b.name).toLowerCase()) return -1;
-        if(Std.string(a.name).toLowerCase() >= Std.string(b.name).toLowerCase()) return 1;
-        return 0;
-    }
-
-    public static function sort_plain(a:String,b:String) {
-        if(Std.string(a).toLowerCase() < Std.string(b).toLowerCase()) return -1;
-        if(Std.string(a).toLowerCase() >= Std.string(b).toLowerCase()) return 1;
-        return 0;
-    }
-
-    static function parse_class( _class:Xml, config:Dynamic ) : ClassDoc {
-
-        var _members = [];
-        var _methods = [];
-        var _properties = [];
-        var _unknowns = new Map<String, UnknownDoc>();        
-        var _extends = new Array<TypeDoc>();
-        var _implements = new Array<TypeDoc>();
-
-            //for each member, parse it and store it
-        for(_member in _class.elements()) {
-
-                //for reusing the name
-            var _member_name = _member.nodeName;
-
-            if(_member_name == 'extends') {
-                
-                _extends.push( parse_type(_member) );
-                
-            } else if(_member_name == 'implements') {
-
-                _implements.push( parse_type(_member) );
-
-            } else {
-
-                //we use these to determine the type
-                var _set = _member.get('set');
-                var _get = _member.get('get');
-                var _is_method = _member.elementsNamed('f').hasNext(); 
-
-                    //without any set/get, it is a regular variable
-                if(_set == null && _get == null && _member_name != 'haxe_doc' && _member_name != 'meta') {
-                        //store in the member list
-                    _members.push( parse_member(_member, config) );
-                } else 
-                    //with "method" it is a function
-                if(_is_method) {
-                        //store in the method list
-                    _methods.push( parse_method(_member, config) );
-                } else 
-                    //this is a property 
-                if( _set == 'accessor' || _get == 'accessor' || _get == 'null' || _set == 'null') {
-                        // store in the properties list
-                    _properties.push( parse_property(_member, config) );
-                } 
-                    //any unknowns 
-                else {
-                    // _unknowns.set( _member_name, parse_unknown(_member, config) );
-                }
-
-            } //not specifically parsed            
-
-        } //for each element in the class
-
-        //sort 
-        _members.sort(sort);
-        _methods.sort(sort);
-        _properties.sort(sort);
-
-        return { 
-            name:_class.get('path'), 
-            type_name:_class.get('path').split('.').pop(),
-            type:'class',
-            doc: parse_doc(_class, config),
-            meta: parse_meta_for_item( _class.elementsNamed('meta') ),
-            extend:_extends,
-            implement:_implements, 
-            members:_members,
-            methods:_methods,
-            properties:_properties, 
-            ispublic:!(_class.get('private') != null) 
-        };
-
-    } //parse_class
-
-    static function type_doc_to_string(t:TypeDoc) {
-
-        var _postfix = '';
-        if(!t.func) {
-            _postfix = type_param_to_string(t.params);
-        }
-        return t.name + _postfix;
-    }
-
-    static function type_param_to_string( param:Array<TypeDoc> ) {
-
-        if(param.length == 0) {
-            return '';
-        }
-
-        var s = '<';
-
-        for(_p in param) {
-            s += _p.name + ',';
-        }
-
-        s = s.substring(0, s.length-1);
-
-        s += '>';
-
-        return s;
-    }
-
-    static function parse_doc( _member:Xml, config:Dynamic ) : String {
-
-        var _doc = '';
-        var _doc_root = _member.elementsNamed('haxe_doc');
-        if(_doc_root != null) {
-            for(child in _doc_root) {
-                _doc = Std.string( child.firstChild() );
-            }
-        }
-
-        return _doc;
-
-    } //parse_doc
-
-    static function parse_member( _member:Xml, config:Dynamic ) : MemberDoc {
-
-            //parse the specific meta flags
-        var _type = parse_type(_member.firstElement());
-            //get the signature for display convenience,
-            //but if it's a function declaration type, it's already in the name
-        var _signature_postfix = _type.func ? '' : type_param_to_string(_type.params);
-        var _signature : String = _member.nodeName + ' : ' + type_doc_to_string(_type);
-
-        return { 
-            ispublic : (_member.get('public') != null),
-            isstatic : (_member.get('static') != null),
-            isinline : (_member.get('get') == 'inline'),
-
-            optional : false,
-            inherited : false,
-            inherit_source : '',
-
-            doc : parse_doc( _member, config ),
-            meta : parse_meta_for_item( _member.elementsNamed('meta') ),
-            signature : _signature,
-            type : _type,
-            name : _member.nodeName
-        };
-
-    } //parse_member
-
-    static function parse_type( _node:Xml ) : TypeDoc {
-            
-        //type
-        var _type_name = 'Dynamic';
-        var _func = false;
-
-        if(_node.nodeName != 'f') {
-            if(_node.exists('path')) {
-                _type_name = _node.get('path');
-            }
-        } else {//f
-            _type_name = parse_internal_function_type(_node);
-            _func = true;
-        }
-
-        return {
-            name : _type_name,
-            params : parse_type_params(_node),
-            func : _func
-        };
 
     } //parse_type
 
-    static function parse_method( _member:Xml, config:Dynamic ) : MethodDoc {
+    static function parse_package( name:String, full:String, subs:TypeRoot, _depth:Int = 0 ) {
 
-        var _signature : String = '';
-        var _args : Array<Argument> = [];
+        _verbose( tabs(_depth) + 'package ' + name + ' / ' + full);
 
-            //fetch from a helper function for clarity.
-        var _finfo = parse_function_node( _member );
+            //private/internal packages have a _ in front of their last type name
+        var _isPrivate = full.split('.').pop().charAt(0) == '_';
 
-            //Append a easier on the eyes function return type for the signature
-        var _rtype = type_doc_to_string(_finfo.return_type);
-            //constructor has no return type
-        if(_finfo.name == 'new') {
-            _rtype = '';
+            //packages, classes etc will add themselves to this object
+            //when they are being parsed, so empty is all for now
+        var packagedoc = {
+            name : name,
+            full : full,
+            isPrivate : _isPrivate,
+            packages : [],
+            classes : [],
+            typedefs : [],
+            enums : [],
+            abstracts : []
         }
-                    
-        var _shortargs : Array<String> = [];
-        for(_arg in _finfo.args) { 
-            var _value = '';
-            if(_arg.value != '' && _arg.value != 'null' && _arg.value != null) {
-                _value = '='+_arg.value;
+
+            //store it in the full packages root map
+        result.packages.set( full, packagedoc );
+
+            //add it to the parent package list of package names
+        var parent_name = get_package_root(full);
+        var parent_package = result.packages.get(parent_name);
+        if(parent_package != null) {
+            parent_package.packages.push(full);
+        }
+
+            //keep parsing it's sub items
+        for(entry in subs) {
+            parse_type(entry, _depth+1);
+        }
+
+    } //parse_package
+
+    static function parse_class( _class:Classdef, _depth:Int = 0 ) {
+
+        _verbose(tabs(_depth) + 'class ' + _class.path + ' / ' + _class.platforms);
+
+            //add it to the parent package list of class names
+        var parent_name = get_package_root(_class.path);
+        var parent_package = result.packages.get(parent_name);
+        if(parent_package != null) {
+            parent_package.classes.push(_class.path);
+        }
+
+        var classdoc = {
+
+            doc : _class.doc,
+            path : _class.path,
+            module : _class.module,
+            file : _class.file,
+
+            meta : _class.meta,
+            params : _class.params,
+            platforms : Lambda.array(_class.platforms),
+
+            interfaces : get_pathparams_list(_class.interfaces),
+            superClass : get_pathparams(_class.superClass),
+            tdynamic : _class.tdynamic,
+
+            isExtern : _class.isExtern,
+            isPrivate : _class.isPrivate,
+            isInterface : _class.isInterface,
+
+            fields : parse_classfields(_class.fields),
+            statics : parse_classfields(_class.statics),
+
+        }
+
+            //store in the full classes root map
+        result.classes.set( _class.path, classdoc );
+
+    } //parse_class
+
+    static function parse_typedef( _typedef:Typedef, _depth:Int = 0 ) {
+
+        _verbose(tabs(_depth) + 'typedef ' + _typedef.path);
+
+            //add it to the parent package list of typedef names
+        var parent_name = get_package_root(_typedef.path);
+        var parent_package = result.packages.get(parent_name);
+        if(parent_package != null) {
+            parent_package.typedefs.push(_typedef.path);
+        }
+
+        var _typemap = new Map();
+
+        for(_tname in _typedef.types.keys()) {
+            var _current = _typedef.types.get(_tname);
+            _typemap.set(_tname, parse_ctype(_current));
+        }
+
+        var typedefdoc = {
+
+            doc : _typedef.doc,
+            path : _typedef.path,
+            module : _typedef.module,
+            file : _typedef.file,
+
+            meta : _typedef.meta,
+            params : _typedef.params,
+            platforms : Lambda.array(_typedef.platforms),
+
+            isPrivate : _typedef.isPrivate,
+
+            type : parse_ctype(_typedef.type),
+            types : _typemap
+        }
+
+            //store in the full typedefs root map
+        result.typedefs.set( _typedef.path, typedefdoc );
+
+    } //parse_typedef
+
+    static function parse_enum( _enum:Enumdef, _depth:Int = 0 ) {
+
+        _verbose(tabs(_depth) + 'enum ' + _enum.path);
+
+            //add it to the parent package list of enums names
+        var parent_name = get_package_root(_enum.path);
+        var parent_package = result.packages.get(parent_name);
+        if(parent_package != null) {
+            parent_package.classes.push(_enum.path);
+        }
+
+        var _constructors = [];
+
+        if(_enum.constructors.length > 0) {
+
+            for(_c in _enum.constructors) {
+
+                var _args = [];
+
+                if(_c.args != null && _c.args.length > 0) {
+                    for(_arg in _c.args) {
+                        _args.push({
+                            name : _arg.name,
+                            t : parse_ctype(_arg.t),
+                            opt : _arg.opt
+                        });
+                    } //each arg
+                } //args ! null && > 0
+
+                _constructors.push({
+                    platforms : Lambda.array(_c.platforms),
+                    name : _c.name,
+                    meta : _c.meta,
+                    doc : _c.doc,
+                    args : _args
+                });
+
+            } //each constructor
+
+        } //_constructors.length > 0
+
+        var enumdoc = {
+
+            doc : _enum.doc,
+            path : _enum.path,
+            module : _enum.module,
+            file : _enum.file,
+
+            meta : _enum.meta,
+            params : _enum.params,
+            platforms : Lambda.array(_enum.platforms),
+
+            isPrivate : _enum.isPrivate,
+            isExtern : _enum.isExtern,
+
+            constructors : _constructors
+        }
+
+            //store in the full enums root map
+        result.enums.set( _enum.path, enumdoc );
+
+    } //parse_enum
+
+    static function parse_abstract( _abstract:Abstractdef, _depth:Int = 0 ) {
+
+        _verbose(tabs(_depth) + 'abstract ' + _abstract.path);
+
+            //add it to the parent package list of abstract names
+        var parent_name = get_package_root(_abstract.path);
+        var parent_package = result.packages.get(parent_name);
+        if(parent_package != null) {
+            parent_package.abstracts.push(_abstract.path);
+        }
+
+    } //parse_abstract
+
+    static function parse_classfields( fields : List<ClassField> ) : Array<ClassFieldDoc> {
+
+        if(fields.length == 0) {
+            return [];
+        }
+
+        var _res = [];
+
+        for(_field in fields) {
+
+            var _fielddoc = {
+                doc : _field.doc,
+                name : _field.name,
+                type : parse_ctype(_field.type),
+
+                line : _field.line,
+                meta : _field.meta,
+                params : _field.params,
+                platforms : Lambda.array(_field.platforms),
+
+                get : parse_rights(_field.get),
+                set : parse_rights(_field.set),
+
+                isPublic : _field.isPublic != null,
+                isOverride : _field.isOverride != null
             }
-            _shortargs.push( _arg.name + ':' + type_doc_to_string(_arg.type) + _value); 
+
+            _res.push(_fielddoc);
+
         }
 
-            //Store the final values
-        var _params = '';
+        return _res;
 
-        _signature = _finfo.name + _params + '(' + _shortargs.join(', ') + ') : ' +  _rtype;
-        _args = _finfo.args;
+    } //parse_classfields
+
+    static function parse_rights( _rights:Rights ) : String {
+
+        switch(_rights) {
+
+            case Rights.RNormal:
+                return 'normal';
+            case Rights.RNo:
+                return 'no';
+            case Rights.RMethod:
+                return 'method';
+            case Rights.RDynamic:
+                return 'dynamic';
+            case Rights.RCall( m ) :
+                return m;
+            default:
+
+        } //switch rights
+
+        return '';
+
+    } //parse_rights
+
+    static function parse_ctype( _type:CType ) : Dynamic {
+
+        if(_type == null) {
+            return null;
+        }
+
+        switch(_type) {
+            case CType.CAbstract( name, params ):
+                return parse_cabstract(name,params);
+            case CType.CClass( name, params ):
+                return parse_cclass(name,params);
+            case CType.CEnum( name, params ):
+                return parse_cenum(name,params);
+            case CType.CTypedef( name, params ):
+                return parse_ctypedef(name,params);
+
+            case CType.CAnonymous( fields ):
+                return parse_canonymous( fields );
+            case CType.CDynamic( t ):
+                return parse_cdynamic( t );
+            case CType.CFunction( args, ret ):
+                return parse_cfunction( args, ret );
+            case CType.CUnknown: //:todo:?
+                return parse_cunknown( _type );
+
+            default:
+        }
+
+        return null;
+
+    } //parse_ctype
+
+    static function parse_ctype_list( list:List<CType> ) : Array<Dynamic> {
+
+        if(list.length == 0) {
+            return [];
+        }
+
+        var _res = [];
+
+            for(type in list) {
+                _res.push( parse_ctype(type) );
+            }
+
+        return _res;
+    } //parse_ctype_list
+
+
+    static function parse_cabstract( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CAbstractDoc {
+        return {
+            type : 'CAbstract',
+            name : name,
+            params : parse_ctype_list(params)
+        };
+    } //parse_cabstract
+
+    static function parse_cclass( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CClassDoc {
+        return {
+            type:'CClass',
+            name:name,
+            params : parse_ctype_list(params)
+        };
+    } //parse_cclass
+
+    static function parse_cenum( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CEnumDoc {
+        return {
+            type:'CEnum',
+            name:name,
+            params : parse_ctype_list(params)
+        };
+    } //parse_cenum
+
+    static function parse_ctypedef( name : haxe.rtti.Path , params : List<haxe.rtti.CType> ) : CTypedefDoc {
+        return {
+            type:'CTypedef',
+            name:name,
+            params : parse_ctype_list(params)
+        };
+    } //parse_ctypedef
+
+    static function parse_canonymous( fields : List<haxe.rtti.ClassField> ) {
+        return {
+            type:'CAnonymous',
+            fields : parse_classfields(fields)
+        };
+    } //parse_canonymous
+
+    static function parse_cfunction( args : List<haxe.rtti.FunctionArgument> , ret : CType ) {
+
+        var _args = [];
+
+        if(args.length > 0) {
+            for(arg in args) {
+                _args.push({
+                    name : arg.name,
+                    opt : arg.opt,
+                    t : parse_ctype(arg.t),
+                    value : arg.value
+                });
+            }
+        }
 
         return {
-
-            name : _member.nodeName,
-            inherited : false,
-            inherit_source : '',
-
-            ispublic : (_member.get('public') != null),
-            isstatic : (_member.get('static') != null),
-            isinline : (_member.get('get') == 'inline'),
-
-            doc : parse_doc(_member, config),
-            meta : parse_meta_for_item(_member.elementsNamed('meta')),
-            
-            args : _args,
-            signature : _signature,
-            return_type : _finfo.return_type
-            
+            type:'CFunction',
+            args: _args,
+            return_type : parse_ctype(ret)
         };
 
-    } //parse_method
+    } //parse_cfunction
 
-    static function parse_property( _member:Xml, config:Dynamic ) : PropertyDoc {
+    static function parse_cunknown( _type:CType ) : CType {
 
-        //default to write/read
-        var _isread : Bool = true;
-        var _iswrite : Bool = true;
-        
-        var _type = parse_type(_member.firstElement());
+        return _type;
+    } //parse_cunknown
 
-            //we use these to determine 
-            //the property status
-        var _set = _member.get('set');
-        var _get = _member.get('get');
-        var _access = 'read/write';
+    static function parse_cdynamic(  ?t : CType ) {
 
-            //What type of access does it allow?
-        if((_get == 'never' || _get == 'null') && (_set == 'accessor' || _set == 'inline') ) {
-            _access = 'write only';
-            _isread = false;
-        } else if( (_set == 'never' || _set == 'null') && (_get == 'accessor' || _get == 'inline') ) {
-            _access = 'read only';
-            _iswrite = false;
-        } else {
-            _access = 'no read/write (${_get},${_set})';
-            _isread = false; _iswrite = false;
-        }
-
-        var _signature_postfix = _type.func ? '' : type_param_to_string(_type.params);
-        var _signature : String = _member.nodeName + ' : ' + _type.name;
-
-        return {
-            name : _member.nodeName,
-            access : _access,
-            type : _type,
-            signature : _signature,
-
-            isread : _isread,
-            iswrite : _iswrite,
-            isstatic : (_member.get('static') != null),
-            ispublic : (_member.get('public') != null),
-
-            inherited : false,
-            inherit_source : '',
-
-            doc : parse_doc(_member, config),
-            meta :  parse_meta_for_item( _member.elementsNamed('meta') )
-            
-        };
-
-    } //parse_property
-
-    static function parse_unknown( _member:Xml, config:Dynamic ) : UnknownDoc {
-        return { name:_member.nodeName, node:_member };
-    } //parse_unknown
+        return parse_ctype(t);
+    } //parse_cdynamic
 
 
-//internal functions
-    static function parse_internal_function_type(_f:Xml){
-            
-        var _final = '';
-
-            //Just push them into a list with ->
-        for(_arg in _f.elements()) {
-            var _type = _arg.get('path');
-            if(_type == 'null' || _type == null) {
-                _type = 'Dynamic';
-            }
-
-            _final += _type + '->';
-        }
-
-            //And remove the final -> (... I know.)
-        _final = _final.substr(0,_final.length-2);
-
-        return _final;
-
-    } //parse_internal_function_type
+//Helpers
 
 
-    static function parse_type_params( _type_node:Xml ) : Array<TypeDoc> {
-
-            //Type Parameter types have child elements
-        var _type_params = _type_node.elements();
-        var _has_type_params = _type_params.hasNext();
-
-        var list = [];
-
-        if(_has_type_params) {
-                //for each child element, append it
-            for(_type_param in _type_params) {
-
-                var _node = parse_type(_type_param);
-                list.push(_node);
-                
-            } //for each type param
-        } //_has_type_params
-
-        return list;
-
-    } //params
-
-    static function parse_function_node( _member:Xml ) : InternalMethodInfo {
-                
-        var _args_final : Array<Argument>= [];
-
-        //the first element has the arguments in
-        var _node = _member.firstElement();
-            //parse the argument types using the type parser
-        var args : TypeDoc = parse_type(_node);
-            //get the return type from the last arg, removing it
-        var _return_type = args.params.pop();
-
-            //now fetch the names and values of the args
-        var _arg_v : String = _node.get('v');
-        var _arg_n : String = _node.get('a');
-
-        var _arg_values = [];
-
-        if(_arg_v != null) {
-            
-            var _av = _arg_v.split(':');
-            for(_avalue in _av) {
-                _arg_values.push(_avalue);
-            }
-        }
-
-        var _arg_names = (_arg_n == null || _arg_n.length == 0) ? [] : _arg_n.split(':');
-        
-        var _index = 0;
-        for(_a in _arg_names) {
-
-            var _val = _arg_values[_index];
-
-            if(args.params[0].name == 'Float') {
-                if(_val != null && _val.length > 0) { 
-                    _val = StringTools.replace(_val,'f','');
+    static function get_pathparams_list( _l : List<PathParams> ) : Array<PathParamDoc> {
+        var _res = [];
+            for(item in _l) {
+                var _item_p = get_pathparams(item);
+                if(_item_p != null) {
+                    _res.push(_item_p);
                 }
             }
+        return _res;
+    } //get_pathparams_list
 
-                //store for use in results
-            _args_final.push({ 
-                name:_arg_names[_index], 
-                type: args.params[_index], 
-                value: _val
-            });
-
-            _index++;
-        }
-
-            //parse function type params,
-            //these member type params aren't like the rest
-        var _params = [];
-        if(_member.exists('params')) {
-            var _typeparams = _member.get('params');
-            _params = _typeparams.split(':');
-        }
-
+        /** Converts a PathParams to digestable format for json (List doesn't seem to work for JSON) */
+    static function get_pathparams( _p : PathParams ) : PathParamDoc {
+        if(_p == null) return null;
         return {
-            name : _member.nodeName,
-            args : _args_final,
-            params : _params,
-            return_type : _return_type
-        };
+            path : _p.path,
+            params : Lambda.array(_p.params)
+        }
+    } //get_pathparams
 
-    } //parse_function_node
+        /** Takes a package like my.package.Class and returns my.package */
+    static function get_package_root( _path:String ) : String {
 
+        var _list = _path.split('.');
+            _list.pop();
+        return _list.join('.');
 
+    } //get_package_root
+
+    static function tabs(d:Int) {
+        return StringTools.rpad('',' ',d*2);
+    } //tabs
+
+    static function _verbose(v:Dynamic) {
+        trace(v);
+    } //_verbose
 
 } //HaxeXMLDocParser

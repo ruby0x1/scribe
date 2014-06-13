@@ -1,24 +1,10 @@
 package scribe.export;
 
-import scribe.HaxeXMLDocParser.HaxeDoc;
-import scribe.HaxeXMLDocParser.ClassDoc;
-import scribe.HaxeXMLDocParser.TypedefDoc;
-import scribe.HaxeXMLDocParser.EnumDoc;
-import scribe.HaxeXMLDocParser.MemberDoc;
-import scribe.HaxeXMLDocParser.PropertyDoc;
-import scribe.HaxeXMLDocParser.MethodDoc;
-import scribe.HaxeXMLDocParser.Argument;
-
 class JSON {
 
-    public static function format( haxedoc:HaxeDoc ) {
+    public static function format( haxedoc:Dynamic ) {
 
-        var export_data = {
-            types:haxedoc.types, 
-            names:haxedoc.typelist
-        };
-
-        return haxe.Json.stringify(export_data, null, '  ' );
+        return haxe.Json.stringify(haxedoc, null, '   ' );
 
     } //format
 
