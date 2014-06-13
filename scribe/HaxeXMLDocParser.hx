@@ -145,6 +145,33 @@ typedef EnumDoc = {
 
 } //EnumDoc
 
+
+typedef AbstractNodeDoc = {
+    var t : Dynamic;
+    var field : Null<String>;
+}
+
+typedef AbstractDoc = {
+
+    var doc : String;
+    var path : String;
+    var file : Null<String>;
+    var module : String;
+
+        /** The meta data attached to this typedef, if any */
+    var meta : MetaData;
+        /** The typedef type parameters, if any */
+    var params : TypeParams;
+        /** The list of platforms this was generated for, if any */
+    var platforms : Array<String>;
+
+    var to : Array<AbstractNodeDoc>;
+    var from : Array<AbstractNodeDoc>;
+    var athis : Dynamic;
+    var impl : ClassDoc;
+
+} //AbstractDoc
+
 typedef ClassFieldDoc = {
 
     var doc : String;
@@ -196,6 +223,7 @@ typedef CAnonymousDoc = {
 }
 
 typedef CDynamicDoc = {
+
     var type:String;
 }
 
@@ -218,7 +246,7 @@ typedef HaxeDoc = {
     var classes : Map<String, ClassDoc>;
     var typedefs : Map<String, TypedefDoc>;
     var enums : Map<String, EnumDoc>;
-    // var abstracts : Map<String, AbstractDoc>;
+    var abstracts : Map<String, AbstractDoc>;
 
 } //HaxeDoc
 
@@ -237,6 +265,7 @@ class HaxeXMLDocParser {
             classes : new Map(),
             typedefs : new Map(),
             enums : new Map(),
+            abstracts : new Map(),
         };
 
         _verbose('parsing ...');
@@ -252,18 +281,25 @@ class HaxeXMLDocParser {
     static function parse_type(type:TypeTree, _depth:Int = 0) {
 
         switch(type) {
+
             case TPackage( name, full, subs ):
                 parse_package( name, full, subs, _depth );
+
             case TClassdecl( _class ):
-                parse_class( _class, _depth );
+                parse_class( _class, false, _depth );
+
             case TTypedecl( _type ):
                 parse_typedef( _type, _depth );
+
             case TEnumdecl( _enum ):
                 parse_enum( _enum, _depth );
+
             case TAbstractdecl( _abstract ):
                 parse_abstract( _abstract, _depth );
+
             default:
-        }
+
+        } //switch
 
     } //parse_type
 
@@ -304,7 +340,8 @@ class HaxeXMLDocParser {
 
     } //parse_package
 
-    static function parse_class( _class:Classdef, _depth:Int = 0 ) {
+        //internal means we are parsing a class for a type, not parsing the type itself
+    static function parse_class( _class:Classdef, _internal:Bool, _depth:Int = 0 ) : ClassDoc {
 
         _verbose(tabs(_depth) + 'class ' + _class.path + ' / ' + _class.platforms);
 
@@ -339,8 +376,12 @@ class HaxeXMLDocParser {
 
         }
 
+        if(!_internal) {
             //store in the full classes root map
-        result.classes.set( _class.path, classdoc );
+            result.classes.set( _class.path, classdoc );
+        }
+
+        return classdoc;
 
     } //parse_class
 
@@ -457,6 +498,52 @@ class HaxeXMLDocParser {
         if(parent_package != null) {
             parent_package.abstracts.push(_abstract.path);
         }
+
+        var to : Array<AbstractNodeDoc>;
+        var from : Array<AbstractNodeDoc>;
+        var athis : Dynamic;
+
+        var _to = [];
+        var _from = [];
+
+        if(_abstract.to.length > 0) {
+            for(_dest in _abstract.to) {
+                _to.push({
+                    t : parse_ctype(_dest.t),
+                    field : _dest.field,
+                });
+            }
+        } //to.length > 0
+
+        if(_abstract.from.length > 0) {
+            for(_source in _abstract.from) {
+                _from.push({
+                    t : parse_ctype(_source.t),
+                    field : _source.field,
+                });
+            } //each from
+        } //from.length > 0
+
+        var abstractdoc = {
+
+            doc : _abstract.doc,
+            path : _abstract.path,
+            module : _abstract.module,
+            file : _abstract.file,
+
+            meta : _abstract.meta,
+            params : _abstract.params,
+            platforms : Lambda.array(_abstract.platforms),
+
+            athis : parse_ctype(_abstract.athis),
+            impl : (_abstract.impl == null) ? null : parse_class(_abstract.impl, true, _depth+1),
+            to : _to,
+            from : _from
+
+        }
+
+            //store in the full abstracts root map
+        result.abstracts.set( _abstract.path, abstractdoc );
 
     } //parse_abstract
 
