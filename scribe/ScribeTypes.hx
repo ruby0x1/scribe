@@ -15,6 +15,7 @@ import haxe.rtti.CType.TypeTree;
 
 typedef HaxeDoc = {
 
+    var names : Array<String>;
     var packages : Map<String, PackageDoc>;
     var classes : Map<String, ClassDoc>;
     var typedefs : Map<String, TypedefDoc>;

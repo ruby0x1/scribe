@@ -18,18 +18,24 @@ import scribe.ScribeTypes;
 
 class HaxeXMLDocParser {
 
-    static var result : HaxeDoc;
+    public static var result : HaxeDoc;
+    public static var unfiltered : HaxeDoc;
+
     static var allowed_packages : Array<String>;
 
-    public static function parse( root:Xml, config:Dynamic, platform:String='cpp' ) : Dynamic {
-
-        allowed_packages = cast config.allowed_packages;
-
-        var xml = new haxe.rtti.XmlParser();
-
-        xml.process( root, platform );
+    public static function parse( root:Xml, config:Dynamic, platform:String='cpp' ) : HaxeDoc {
 
         result = {
+            names : [],
+            packages : new Map(),
+            classes : new Map(),
+            typedefs : new Map(),
+            enums : new Map(),
+            abstracts : new Map(),
+        };
+
+        unfiltered = {
+            names : [],
             packages : new Map(),
             classes : new Map(),
             typedefs : new Map(),
@@ -39,54 +45,67 @@ class HaxeXMLDocParser {
 
         _verbose('parsing ...');
 
+        pre_parse(root, config, platform);
+        post_parse(config, platform);
+
+        return result;
+
+    } //parse
+
+    static function pre_parse( root:Xml, config:Dynamic, platform:String ) : HaxeDoc {
+
+        allowed_packages = cast config.allowed_packages;
+
+        var xml = new haxe.rtti.XmlParser();
+
+        xml.process( root, platform );
+
         for(entry in xml.root) {
             parse_type(entry);
         }
 
         return result;
 
-    } //parse
+    } //pre_parse
+
+    static function post_parse(config:Dynamic, platform:String ) {
+
+        for(_typedef in result.typedefs) {
+            result.names.push(_typedef.path);
+        }
+        for(_class in result.classes) {
+            result.names.push(_class.path);
+        }
+        for(_enum in result.enums) {
+            result.names.push(_enum.path);
+        }
+        for(_abstract in result.abstracts) {
+            result.names.push(_abstract.path);
+        }
+
+        trace(config.map_typedefs);
+        trace(config.inherit_fields);
+
+    } //post_parse
 
     static function parse_type(type:TypeTree, _depth:Int = 0) {
-
-        var _parse = true;
-        var _count = 0;
 
         switch(type) {
 
             case TPackage( name, full, subs ):
-
-                if(allowed_packages.indexOf(name) == -1) {
-                    _parse = false;
-                }
-
-                if(_parse) {
-                    parse_package( name, full, subs, _depth );
-                }
+                parse_package( name, full, subs, _depth );
 
             case TClassdecl( _class ):
-
-                if(in_allowed_package(_class.path)) {
-                    parse_class( _class, false, _depth );
-                }
+                parse_class( _class, false, _depth );
 
             case TTypedecl( _type ):
-
-                if(in_allowed_package(_type.path)) {
-                    parse_typedef( _type, _depth );
-                }
+                parse_typedef( _type, _depth );
 
             case TEnumdecl( _enum ):
-
-                if(in_allowed_package(_enum.path)) {
-                    parse_enum( _enum, _depth );
-                }
+                parse_enum( _enum, _depth );
 
             case TAbstractdecl( _abstract ):
-
-                if(in_allowed_package(_abstract.path)) {
-                    parse_abstract( _abstract, _depth );
-                }
+                parse_abstract( _abstract, _depth );
 
             default:
 
@@ -115,11 +134,14 @@ class HaxeXMLDocParser {
         }
 
             //store it in the full packages root map
-        result.packages.set( full, packagedoc );
+        unfiltered.packages.set( full, packagedoc );
+        if(allowed_packages.indexOf(name) == -1) {
+            result.packages.set( full, packagedoc );
+        }
 
             //add it to the parent package list of package names
         var parent_name = get_package_root(full);
-        var parent_package = result.packages.get(parent_name);
+        var parent_package = unfiltered.packages.get(parent_name);
         if(parent_package != null) {
             parent_package.packages.push(full);
         }
@@ -138,7 +160,7 @@ class HaxeXMLDocParser {
 
             //add it to the parent package list of class names
         var parent_name = get_package_root(_class.path);
-        var parent_package = result.packages.get(parent_name);
+        var parent_package = unfiltered.packages.get(parent_name);
         if(parent_package != null) {
             parent_package.classes.push(_class.path);
         }
@@ -169,8 +191,11 @@ class HaxeXMLDocParser {
         }
 
         if(!_internal) {
-            //store in the full classes root map
-            result.classes.set( _class.path, classdoc );
+                //store in the full classes root map
+            unfiltered.classes.set( _class.path, classdoc );
+            if(in_allowed_package(_class.path)) {
+                result.classes.set( _class.path, classdoc );
+            }
         }
 
         return classdoc;
@@ -183,7 +208,7 @@ class HaxeXMLDocParser {
 
             //add it to the parent package list of typedef names
         var parent_name = get_package_root(_typedef.path);
-        var parent_package = result.packages.get(parent_name);
+        var parent_package = unfiltered.packages.get(parent_name);
         if(parent_package != null) {
             parent_package.typedefs.push(_typedef.path);
         }
@@ -216,7 +241,10 @@ class HaxeXMLDocParser {
         } //typedefdoc
 
             //store in the full typedefs root map
-        result.typedefs.set( _typedef.path, typedefdoc );
+        unfiltered.typedefs.set( _typedef.path, typedefdoc );
+        if(in_allowed_package(_typedef.path)) {
+            result.typedefs.set( _typedef.path, typedefdoc );
+        }
 
     } //parse_typedef
 
@@ -226,7 +254,7 @@ class HaxeXMLDocParser {
 
             //add it to the parent package list of enums names
         var parent_name = get_package_root(_enum.path);
-        var parent_package = result.packages.get(parent_name);
+        var parent_package = unfiltered.packages.get(parent_name);
         if(parent_package != null) {
             parent_package.classes.push(_enum.path);
         }
@@ -279,7 +307,10 @@ class HaxeXMLDocParser {
         }
 
             //store in the full enums root map
-        result.enums.set( _enum.path, enumdoc );
+        unfiltered.enums.set( _enum.path, enumdoc );
+        if(in_allowed_package(_enum.path)) {
+            result.enums.set( _enum.path, enumdoc );
+        }
 
     } //parse_enum
 
@@ -289,7 +320,7 @@ class HaxeXMLDocParser {
 
             //add it to the parent package list of abstract names
         var parent_name = get_package_root(_abstract.path);
-        var parent_package = result.packages.get(parent_name);
+        var parent_package = unfiltered.packages.get(parent_name);
         if(parent_package != null) {
             parent_package.abstracts.push(_abstract.path);
         }
@@ -337,7 +368,10 @@ class HaxeXMLDocParser {
         }
 
             //store in the full abstracts root map
-        result.abstracts.set( _abstract.path, abstractdoc );
+        unfiltered.abstracts.set( _abstract.path, abstractdoc );
+        if(in_allowed_package(_abstract.path)) {
+            result.abstracts.set( _abstract.path, abstractdoc );
+        }
 
     } //parse_abstract
 
@@ -747,7 +781,7 @@ class HaxeXMLDocParser {
     } //tabs
 
     static function _verbose(v:Dynamic) {
-        // trace(v);
+        trace(v);
     } //_verbose
 
 } //HaxeXMLDocParser
