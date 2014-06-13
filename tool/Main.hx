@@ -200,44 +200,50 @@ class Main {
 
     static function do_generate( args:ArgValues, config:Dynamic, input_file:String, output_file:String ) : Bool {
 
-            //to measure how long
-        var _start_time = haxe.Timer.stamp();
-            //if the input is a special file name we attempt to genrate the xml first
-        if(input_file == 'scribe.types.xml') {
-            var res = generate_types_xml( args, config );
-            if(res != 0) {
-                Sys.println('- Stopping due to errors from build command.');
+        if(!args.has('no-output-json')) {
+
+                //to measure how long
+            var _start_time = haxe.Timer.stamp();
+
+                //if the input is a special file name we attempt to genrate the xml first
+            if(input_file == 'scribe.types.xml') {
+                var res = generate_types_xml( args, config );
+                if(res != 0) {
+                    Sys.println('- Stopping due to errors from build command.');
+                    return false;
+                }
+            }
+
+                //read the file data
+            var _xml_data = '';
+
+            try {
+                _xml_data = Utils.read_file( input_file );
+            } catch( e:Dynamic ) {
+                Sys.println( "- ERROR - cannot read input xml file? " + input_file );
+                Sys.println( e + "\n" );
                 return false;
             }
-        }
-            //read the file data
-        var _xml_data = '';
 
-        try {
-            _xml_data = Utils.read_file( input_file );
-        } catch( e:Dynamic ) {
-            Sys.println( "- ERROR - cannot read input xml file? " + input_file );
-            Sys.println( e + "\n" );
-            return false;
-        }
+                //parse it
+            var haxedoc = scribe.Scribe.parse_from_string(config, _xml_data);
+                //export it
+            var json = scribe.export.JSON.format( haxedoc );
 
-            //parse it
-        var haxedoc = scribe.Scribe.parse_from_string(config, _xml_data);
-            //export it
-        var json = scribe.export.JSON.format( haxedoc );
+            if(output_file != '-display') {
+                    //save it
+                Utils.save_file( output_file, json );
+                    //calculate and round to a fixed precision
+                var _time = haxe.Timer.stamp() - _start_time;
+                var _n = Math.pow(10,5); //5 decimal points
+                    _time = (Std.int(_time*_n) / _n);
 
-        if(output_file != '-display') {
-                //save it
-            Utils.save_file( output_file, json );
-                //calculate and round to a fixed precision
-            var _time = haxe.Timer.stamp() - _start_time;
-            var _n = Math.pow(10,5); //5 decimal points
-                _time = (Std.int(_time*_n) / _n);
+                Sys.println('converted ' + input_file + ' to ' + output_file + ' in ' + _time + 's' );
+            } else {
+                Sys.println(json);
+            }
 
-            Sys.println('converted ' + input_file + ' to ' + output_file + ' in ' + _time + 's' );
-        } else {
-            Sys.println(json);
-        }
+        } //no-output-json
 
         if(!args.has('no-output')) {
 
