@@ -154,9 +154,23 @@ class Main {
         if(Std.is(config.allowed_packages, String)) {
             config.allowed_packages = config.allowed_packages.split(',');
         }
+            //The allowed types should be included from the empty package
+        if(Std.is(config.allowed_from_empty_package, String)) {
+            config.allowed_from_empty_package = config.allowed_from_empty_package.split(',');
+        }
             //so store them in an array
         var _allowed_packages : Array<String> = config.allowed_packages;
             _allowed_packages.map(function(_p:String){
+                return _p = StringTools.trim(_p);
+            });
+
+            //so store them in an array
+        var _allowed_from_empty_package : Array<String> = config.allowed_from_empty_package;
+        if(_allowed_from_empty_package == null) {
+            _allowed_from_empty_package = [];
+        }
+
+            _allowed_from_empty_package.map(function(_p:String){
                 return _p = StringTools.trim(_p);
             });
 
@@ -172,6 +186,12 @@ class Main {
         for(_package in _allowed_packages) {
             run_args.push('--macro');
             run_args.push('include("' + _package + '")');
+        }
+
+            //and append each as a explicit --macro include('my.package')
+        for(_type in _allowed_from_empty_package) {
+            run_args.push('--macro');
+            run_args.push('keep("' + _type + '")');
         }
 
         Sys.println( run_args );

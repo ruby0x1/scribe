@@ -22,11 +22,13 @@ class HaxeXMLDocParser {
     public static var unfiltered : HaxeDoc;
 
     static var allowed_packages : Array<String>;
+    static var allowed_root_types : Array<String>;
 
     public static function parse( root:Xml, config:Dynamic, platform:String='cpp' ) : HaxeDoc {
 
         result = {
             names : [],
+            package_roots : [],
             packages : new Map(),
             classes : new Map(),
             typedefs : new Map(),
@@ -36,6 +38,7 @@ class HaxeXMLDocParser {
 
         unfiltered = {
             names : [],
+            package_roots : [],
             packages : new Map(),
             classes : new Map(),
             typedefs : new Map(),
@@ -55,18 +58,56 @@ class HaxeXMLDocParser {
     static function pre_parse( root:Xml, config:Dynamic, platform:String ) : HaxeDoc {
 
         allowed_packages = cast config.allowed_packages;
+        allowed_root_types = cast config.allowed_from_empty_package;
+
+        if(allowed_root_types == null) {
+            allowed_root_types = [];
+        }
+
+            //add the empty package for types that are empty
+        var _empty_package_doc = {
+            name : '_empty_',
+            full : '_empty_',
+            isPrivate : false,
+            packages : [],
+            classes : [],
+            typedefs : [],
+            enums : [],
+            abstracts : []
+        } //_empty_package_doc
+
+        result.packages.set('_empty_', _empty_package_doc);
+        unfiltered.packages.set('_empty_', _empty_package_doc);
 
         var xml = new haxe.rtti.XmlParser();
 
         xml.process( root, platform );
 
         for(entry in xml.root) {
+
+            switch(entry) {
+                default:
+                case TPackage( name, full, subs ):
+                    unfiltered.package_roots.push(name);
+                    if(allowed_packages.indexOf(name) != -1) {
+                        result.package_roots.push(name);
+                    }
+
+            } //switch
+
             parse_type(entry);
-        }
+
+        } //each entry
 
         return result;
 
     } //pre_parse
+
+    static function dosort(a:String,b:String) {
+        if(a < b) return -1;
+        if(a > b) return 1;
+        return 0;
+    }
 
     static function post_parse(config:Dynamic, platform:String ) {
 
@@ -83,8 +124,15 @@ class HaxeXMLDocParser {
             result.names.push(_abstract.path);
         }
 
-        trace(config.map_typedefs);
-        trace(config.inherit_fields);
+        for(_package in result.packages) {
+            _package.abstracts.sort(dosort);
+            _package.typedefs.sort(dosort);
+            _package.classes.sort(dosort);
+            _package.enums.sort(dosort);
+            _package.packages.sort(dosort);
+        }
+
+        result.names.sort(dosort);
 
     } //post_parse
 
@@ -135,7 +183,7 @@ class HaxeXMLDocParser {
 
             //store it in the full packages root map
         unfiltered.packages.set( full, packagedoc );
-        if(allowed_packages.indexOf(name) == -1) {
+        if(in_allowed_package(full) || allowed_packages.indexOf(name) != -1) {
             result.packages.set( full, packagedoc );
         }
 
@@ -165,10 +213,21 @@ class HaxeXMLDocParser {
             parent_package.classes.push(_class.path);
         }
 
+            //add to the root package if it's an empty package
+        if(in_empty_package(_class.path)) {
+            unfiltered.packages.get('_empty_').classes.push(_class.path);
+            if(in_allowed_types(_class.path)) {
+                trace('adding ${_class.path} to _empty_');
+                result.packages.get('_empty_').classes.push(_class.path);
+            }
+        }
+
         var classdoc = {
 
             doc : _class.doc,
             path : _class.path,
+            name : _class.path.split('.').pop(),
+            type : 'class',
             module : _class.module,
             file : _class.file,
 
@@ -193,7 +252,8 @@ class HaxeXMLDocParser {
         if(!_internal) {
                 //store in the full classes root map
             unfiltered.classes.set( _class.path, classdoc );
-            if(in_allowed_package(_class.path)) {
+
+            if(in_allowed_package(_class.path) || in_allowed_types(_class.path)) {
                 result.classes.set( _class.path, classdoc );
             }
         }
@@ -213,6 +273,14 @@ class HaxeXMLDocParser {
             parent_package.typedefs.push(_typedef.path);
         }
 
+            //add to the root package if it's an empty package
+        if(in_empty_package(_typedef.path)) {
+            unfiltered.packages.get('_empty_').typedefs.push(_typedef.path);
+            if(in_allowed_types(_typedef.path)) {
+                result.packages.get('_empty_').typedefs.push(_typedef.path);
+            }
+        }
+
         var _typemap = new Map();
 
         for(_tname in _typedef.types.keys()) {
@@ -226,6 +294,8 @@ class HaxeXMLDocParser {
 
             doc : _typedef.doc,
             path : _typedef.path,
+            name : _typedef.path.split('.').pop(),
+            type : 'typedef',
             module : _typedef.module,
             file : _typedef.file,
 
@@ -256,7 +326,14 @@ class HaxeXMLDocParser {
         var parent_name = get_package_root(_enum.path);
         var parent_package = unfiltered.packages.get(parent_name);
         if(parent_package != null) {
-            parent_package.classes.push(_enum.path);
+            parent_package.enums.push(_enum.path);
+        }
+            //add to the root package if it's an empty package
+        if(in_empty_package(_enum.path)) {
+            unfiltered.packages.get('_empty_').enums.push(_enum.path);
+            if(in_allowed_types(_enum.path)) {
+                result.packages.get('_empty_').enums.push(_enum.path);
+            }
         }
 
         var _constructors = [];
@@ -293,6 +370,8 @@ class HaxeXMLDocParser {
 
             doc : _enum.doc,
             path : _enum.path,
+            name : _enum.path.split('.').pop(),
+            type : 'enum',
             module : _enum.module,
             file : _enum.file,
 
@@ -324,6 +403,13 @@ class HaxeXMLDocParser {
         if(parent_package != null) {
             parent_package.abstracts.push(_abstract.path);
         }
+            //add to the root package if it's an empty package
+        if(in_empty_package(_abstract.path)) {
+            unfiltered.packages.get('_empty_').abstracts.push(_abstract.path);
+            if(in_allowed_types(_abstract.path)) {
+                result.packages.get('_empty_').abstracts.push(_abstract.path);
+            }
+        }
 
         var to : Array<AbstractNodeDoc>;
         var from : Array<AbstractNodeDoc>;
@@ -353,6 +439,8 @@ class HaxeXMLDocParser {
 
             doc : _abstract.doc,
             path : _abstract.path,
+            name : _abstract.path.split('.').pop(),
+            type : 'abstract',
             module : _abstract.module,
             file : _abstract.file,
 
@@ -733,8 +821,31 @@ class HaxeXMLDocParser {
 
 //Helpers
 
-    static function in_allowed_package( _path:String ) : Bool {
+    static function in_empty_package( _path:String ) : Bool {
 
+        if(_path.indexOf('.') == -1) {
+            return true;
+        }
+
+        return false;
+
+    } //in_empty_package
+
+    static function in_allowed_types( _path:String ) : Bool {
+
+        if(in_empty_package(_path)) {
+            for(_type in allowed_root_types) {
+                if(_path == _type) {
+                    return true;
+                }
+            }
+        } //in_empty_package
+
+        return false;
+
+    } //in_allowed_types
+
+    static function in_allowed_package( _path:String ) : Bool {
         var _count = 0;
 
             allowed_packages.map(function(_p:String){

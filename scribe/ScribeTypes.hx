@@ -16,6 +16,7 @@ import haxe.rtti.CType.TypeTree;
 typedef HaxeDoc = {
 
     var names : Array<String>;
+    var package_roots : Array<String>;
     var packages : Map<String, PackageDoc>;
     var classes : Map<String, ClassDoc>;
     var typedefs : Map<String, TypedefDoc>;
@@ -60,6 +61,10 @@ typedef ClassDoc = {
     var doc : String;
         /** The full class path including package */
     var path : String;
+        /** The short name only */
+    var name : String;
+        /** The type only */
+    var type : String;
         /** The module (file) in which this definition originated, null if standalone */
     var module : String;
         /** The source file on disk */
@@ -98,6 +103,8 @@ typedef TypedefDoc = {
     var doc : String;
 
     var path : String;
+    var name : String;
+    var type : String;
 
     var file : Null<String>;
 
@@ -136,6 +143,8 @@ typedef EnumDoc = {
     var doc : String;
 
     var path : String;
+    var name : String;
+    var type : String;
 
     var file : Null<String>;
 
@@ -164,6 +173,8 @@ typedef AbstractDoc = {
 
     var doc : String;
     var path : String;
+    var name : String;
+    var type : String;
     var file : Null<String>;
     var module : String;
 
