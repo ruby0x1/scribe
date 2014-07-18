@@ -121,6 +121,35 @@
         var _api_partials = {};
         var doc = helper.json( config.api_source_json );
 
+        helper.bars.registerHelper('member_visible', function(type, section, name, options) {
+
+            var show = false;
+            var _type_info = api.type_get_info(config, doc, type);
+            var _type_info = _type_info[section];
+
+            for(index in _type_info) {
+                var item = _type_info[index];
+                if(item.name == name) {
+                    _type_info = item;
+                    break;
+                }
+            }
+
+            var show = _type_info.isPrivate != true;
+
+            if(_type_info.isPublic == false) {
+                show = false;
+            }
+
+            if(api.type_has_meta(config, doc, _type_info, ':noCompletion')){
+                show = false;
+            }
+
+                //run the block only if not hidden
+            return show;
+
+        }); //member_visible
+
         helper.bars.registerHelper('name_visible', function(name, options) {
 
             var _type_info = api.type_get_info(config, doc, name);

@@ -190,8 +190,8 @@ class Main {
 
             //and append each as a explicit --macro include('my.package')
         for(_type in _allowed_from_empty_package) {
-            run_args.push('--macro');
-            run_args.push('keep("' + _type + '")');
+            // run_args.push('--macro');
+            // run_args.push('keep("' + _type + '")');
         }
 
         Sys.println( run_args );

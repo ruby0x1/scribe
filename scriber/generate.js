@@ -141,7 +141,7 @@ var marked      = require('marked'),
                 //remove processed item
             _the_list.shift();
                 //keep reading
-            process.nextTick(function(){
+            setImmediate(function(){
                 do_write( config, _the_list, _done );
             });
 
@@ -163,7 +163,7 @@ var marked      = require('marked'),
                     //remove processed item
                 _the_list.shift();
 
-                process.nextTick(function(){
+                setImmediate(function(){
                     do_md_to_html( config, _the_list, _done );
                 });
 
@@ -186,7 +186,7 @@ var marked      = require('marked'),
                 //remove processed item
             _the_list.shift();
                 //keep reading
-            process.nextTick(function(){
+            setImmediate(function(){
                 do_html_templating( config, _the_list, _done );
             });
 
@@ -221,7 +221,7 @@ var marked      = require('marked'),
 
     } //generate_docs
 
-    helper._verbose = true;
+    helper._verbose = false;
     helper.root = process.cwd();
 
         helper.log('- scriber v1.0.0-alpha');
