@@ -12,6 +12,10 @@
 
             helper.log('- parsing json api description');
 
+        if(!config.api_input) {
+            return;
+        }
+
         api.generate_md_files( config );
 
     } //generate

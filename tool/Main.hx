@@ -7,6 +7,9 @@ class Main {
     static var old_cwd : String = '';
     static var cwd : String = '';
 
+    static var skip_scribe : Bool = false;
+    static var skip_scriber : Bool = false;
+
     public function new( run_path:String, args : ArgValues ) {
 
         old_cwd = Sys.getCwd();
@@ -25,7 +28,10 @@ class Main {
             config_path = args.get('config').value;
         } //config
 
-        if( !sys.FileSystem.exists( config_path ) ) {
+        skip_scribe = args.has('no-scribe');
+        skip_scriber = args.has('no-scriber');
+
+        if( !sys.FileSystem.exists( config_path ) && !skip_scribe ) {
 
             display_version();
 
@@ -37,13 +43,20 @@ class Main {
 
         } // config_path
 
+        var config = {};
+
+        if(!skip_scribe) {
+
             //read the config path
-        var config = haxe.Json.parse( Utils.read_file( config_path ) );
-        if(config == null) {
-            display_version();
-            Sys.println('- ERROR - Config file was unreadable?. \n');
-            return;
-        } //config == null
+            config = haxe.Json.parse( Utils.read_file( config_path ) );
+
+            if(config == null) {
+                display_version();
+                Sys.println('- ERROR - Config file was unreadable?. \n');
+                return;
+            } //config == null
+
+        } //skip_scribe
 
             //try and generate based on flags
         handle_generate( args, config );
@@ -55,46 +68,51 @@ class Main {
 
     static function handle_generate( args:ArgValues, config:Dynamic ) : Bool {
 
-            //we must have a valid output path specified
-        var _output_flag = args.get('output');
-
-        if(config.output == null && _output_flag == null ) {
-            display_version();
-            Sys.println('- ERROR - Output path is required in config.output or -output outputfile.json \n');
-            return false;
-        }
-
-            //if they are asking for a specific file
-            // on the command line parse that first
         var input_file = '';
         var output_file = '';
 
-        if(args.has('input')) {
-            input_file = args.get('input').value;
-            if(input_file.length == 0) {
-                 display_version();
-                Sys.println('- ERROR - Cannot take -input without a file');
+        if(!skip_scribe) {
+
+                //we must have a valid output path specified
+            var _output_flag = args.get('output');
+
+            if(config.output == null && _output_flag == null ) {
+                display_version();
+                Sys.println('- ERROR - Output path is required in config.output or -output outputfile.json \n');
                 return false;
             }
-        } else {
-            input_file = config.input;
-        }
 
-        if(_output_flag != null) {
-            output_file = _output_flag.value;
-        } else {
-            output_file = (config.output != null) ? config.output : 'scribe_output.json';
-        }
+                //if they are asking for a specific file
+                // on the command line parse that first
 
-        if(args.has('display')) {
-            output_file = '-display';
-        }
+            if(args.has('input')) {
+                input_file = args.get('input').value;
+                if(input_file.length == 0) {
+                     display_version();
+                    Sys.println('- ERROR - Cannot take -input without a file');
+                    return false;
+                }
+            } else {
+                input_file = config.input;
+            }
 
-        if( sys.FileSystem.exists( output_file ) && (!args.has('force') && !config.force ) ) {
-            display_version();
-            Sys.println('- ERROR - Cannot override ' + output_file + ' without -force or config.force = true');
-            return false;
-        }
+            if(_output_flag != null) {
+                output_file = _output_flag.value;
+            } else {
+                output_file = (config.output != null) ? config.output : 'scribe_output.json';
+            }
+
+            if(args.has('display')) {
+                output_file = '-display';
+            }
+
+            if( sys.FileSystem.exists( output_file ) && (!args.has('force') && !config.force ) ) {
+                display_version();
+                Sys.println('- ERROR - Cannot override ' + output_file + ' without -force or config.force = true');
+                return false;
+            }
+
+        } //!skip_scribe
 
         return do_generate( args, config, input_file, output_file );
 
@@ -220,7 +238,7 @@ class Main {
 
     static function do_generate( args:ArgValues, config:Dynamic, input_file:String, output_file:String ) : Bool {
 
-        if(!args.has('no-output-json')) {
+        if(!skip_scribe) {
 
                 //to measure how long
             var _start_time = haxe.Timer.stamp();
@@ -265,7 +283,7 @@ class Main {
 
         } //no-output-json
 
-        if(!args.has('no-output')) {
+        if(!args.has('skip_scriber')) {
 
             var _platform = Utils.current_platform();
             var postfix = '';
