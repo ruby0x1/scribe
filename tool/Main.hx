@@ -118,10 +118,10 @@ class Main {
 
     } //handle_generate
 
-    static function generate_build_flags_hxml( args:ArgValues, config:Dynamic ) {
+    static function generate_build_flags_hxml_from_aether( args:ArgValues, config:Dynamic ) {
 
             //this runs a command like :
-            //lime display /project/path/project.xml target
+            //aether display /project/path/project.xml target
 
         var project_path : String = '';
 
@@ -129,12 +129,12 @@ class Main {
             project_path = config.lime_project;
         }
 
-        if(args.has('lime_project')) {
-            project_path = args.get('lime_project').value;
+        if(args.has('aether_project')) {
+            project_path = args.get('aether_project').value;
         }
 
         if(project_path == '') {
-            Sys.println("\n- WARNING - lime project type xml output requested but no lime project specified in config or with -lime_project");
+            Sys.println("\n- WARNING - lime project type xml output requested but no lime project specified in config or with -aether_project");
             return '';
         }
 
@@ -154,10 +154,49 @@ class Main {
         return results;
     }
 
+    static function generate_build_flags_hxml_from_flow( args:ArgValues, config:Dynamic ) {
+
+            //this runs a command like :
+            //flow <system> info --hxml /project/path/project.flow target
+
+        var project_path : String = '';
+
+        if(config.flow_project != null) {
+            project_path = config.flow_project;
+        }
+
+        if(args.has('flow_project')) {
+            project_path = args.get('flow_project').value;
+        }
+
+        if(project_path == '') {
+            Sys.println("\n- WARNING - flow project output requested but no flow project specified in config or with -flow_project");
+            return '';
+        }
+
+        config.__project_path = project_path;
+
+        var run_args = [
+            'info',
+            Utils.current_platform(),
+            '--hxml',
+            '--project',
+            config.__project_path
+        ];
+
+        var process = new sys.io.Process('flow', run_args );
+        var results = process.stdout.readAll().toString();
+
+            process.close();
+
+        return results;
+
+    }
+
     static function generate_types_xml( args:ArgValues, config:Dynamic ) : Int {
 
             //try and generate the build flags
-        var flags = generate_build_flags_hxml(args, config);
+        var flags = generate_build_flags_hxml_from_flow(args, config);
 
             //warning is up higher in the flags so we
             //can gracefully ignore
@@ -167,6 +206,59 @@ class Main {
 
             //There are flags, we can write them to a temp file
         Utils.save_file('.scribe.last_build_flags.hxml', flags);
+
+            //now we construct our arguments for generating the xml type file
+        var run_args = [
+            cwd + '/.scribe.last_build_flags.hxml',
+            '--no-output',
+            '-dce', 'no',
+            '-xml', cwd + '/scribe.types.xml'
+        ];
+
+            //and append each as a explicit --macro include('my.package')
+        for(_package in allowed_packages) {
+            run_args.push('--macro');
+            run_args.push('include("' + _package + '")');
+        }
+
+            //and append each as a explicit --macro include('my.package')
+        for(_type in allowed_from_empty_package) {
+            run_args.push('--macro');
+            run_args.push('keep("' + _type + '")');
+        }
+
+        Sys.println( run_args );
+
+            //change to the project path
+        Sys.setCwd( haxe.io.Path.directory(config.__project_path) + '/bin/mac64.build/' );
+
+            //and run it
+        var _process = new sys.io.Process('haxe', run_args);
+        var _results = _process.stdout.readAll().toString();
+
+        var exitcode = _process.exitCode();
+        if(exitcode != 0) {
+            Sys.println("- ERROR - from project compile : ");
+            Sys.println(_process.stderr.readAll());
+        }
+
+        _process.close();
+
+            //set back to running path
+        Sys.setCwd(cwd);
+
+        return exitcode;
+
+    } //generate_types_xml
+
+
+    static var allowed_packages : Array<String>;
+    static var allowed_from_empty_package : Array<String>;
+
+    static function init_config(args:ArgValues, config:Dynamic) {
+
+        allowed_packages = [];
+        allowed_from_empty_package = [];
 
             //The allowed packages should definitely be included, whether they are referenced or not
         if(Std.is(config.allowed_packages, String)) {
@@ -188,53 +280,14 @@ class Main {
             _allowed_from_empty_package = [];
         }
 
-            _allowed_from_empty_package.map(function(_p:String){
-                return _p = StringTools.trim(_p);
-            });
+        _allowed_from_empty_package.map(function(_p:String){
+            return _p = StringTools.trim(_p);
+        });
 
-            //now we construct our arguments for generating the xml type file
-        var run_args = [
-            cwd + '/.scribe.last_build_flags.hxml',
-            '--no-output',
-            '-dce', 'no',
-            '-xml', cwd + '/scribe.types.xml'
-        ];
+        allowed_packages = _allowed_packages;
+        allowed_from_empty_package = _allowed_from_empty_package;
 
-            //and append each as a explicit --macro include('my.package')
-        for(_package in _allowed_packages) {
-            run_args.push('--macro');
-            run_args.push('include("' + _package + '")');
-        }
-
-            //and append each as a explicit --macro include('my.package')
-        for(_type in _allowed_from_empty_package) {
-            // run_args.push('--macro');
-            // run_args.push('keep("' + _type + '")');
-        }
-
-        Sys.println( run_args );
-
-            //change to the project path
-        Sys.setCwd( haxe.io.Path.directory(config.__project_path) );
-
-            //and run it
-        var _process = new sys.io.Process('haxe', run_args);
-        var _results = _process.stdout.readAll().toString();
-
-        var exitcode = _process.exitCode();
-        if(exitcode != 0) {
-            Sys.println("- ERROR - from lime project compile : ");
-            Sys.println(_process.stderr.readAll());
-        }
-
-        _process.close();
-
-            //set back to running path
-        Sys.setCwd(cwd);
-
-        return exitcode;
-
-    } //generate_types_xml
+    } //init_config
 
     static function do_generate( args:ArgValues, config:Dynamic, input_file:String, output_file:String ) : Bool {
 
@@ -243,8 +296,11 @@ class Main {
                 //to measure how long
             var _start_time = haxe.Timer.stamp();
 
+
+            init_config(args, config);
+
                 //if the input is a special file name we attempt to genrate the xml first
-            if(input_file == 'scribe.types.xml') {
+            if(input_file == 'scribe.types.xml' && args.has('do-generate')) {
                 var res = generate_types_xml( args, config );
                 if(res != 0) {
                     Sys.println('- Stopping due to errors from build command.');

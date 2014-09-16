@@ -10,11 +10,11 @@
 
     api.generate = function(config) {
 
-            helper.log('- parsing json api description');
-
         if(!config.api_input) {
             return;
         }
+
+        helper.log('- parsing json api description');
 
         api.generate_md_files( config );
 
@@ -104,6 +104,28 @@
             return JSON.stringify(context,null,2);
         });
 
+        helper.bars.registerHelper('if', function (v1, op_opt, v2, options) {
+
+            if(options === void 0) {
+                if(v2 === void 0) {
+                    return v1 ? op_opt.fn(this) : op_opt.inverse(this);
+                }
+            }
+
+            var _true = false;
+            switch (op_opt) {
+                case '==':  _true = v1 == v2;   break;
+                case '===': _true = v1 === v2;  break;
+                case '!==': _true = v1 !== v2;  break;
+                case '<':   _true = v1 < v2;    break;
+                case '<=':  _true = v1 <= v2;   break;
+                case '>':   _true = v1 > v2;    break;
+                case '>=':  _true = v1 >= v2;   break;
+                case '||':  _true = v1 || v2;   break;
+                case '&&':  _true = v1 && v2;   break;
+            }
+            return _true ? options.fn(this) : options.inverse(this);
+        });
 
         helper.bars.registerHelper('escape_markdown', function(data) {
             if(!data) return data;
@@ -141,7 +163,8 @@
 
             var show = _type_info.isPrivate != true;
 
-            if(_type_info.isPublic == false) {
+
+            if(!_type_info.isPublic) {
                 show = false;
             }
 
@@ -180,23 +203,67 @@
             return doc[object][name];
         });
 
+        helper.bars.registerHelper('find_type', function(name) {
+            return  doc.classes[name] ||
+                    doc.typedefs[name] ||
+                    doc.abstracts[name] ||
+                    doc.enums[name] ||
+                    doc.packages[name];
+        });
+
         helper.bars.registerHelper('hidden_package', function(name) {
             if(!name) return true;
+
+            if(config.api_packages_ignore && config.api_packages_ignore.length) {
+                if(config.api_packages_ignore.indexOf(name) != -1) {
+                    return true;
+                }
+            }
+
             var _p = doc.packages[name];
-            if(!_p) return true;
-            if(_p.isPrivate) return true;
+
+            if(!_p) {
+                return true;
+            }
+
+            if(_p.isPrivate) {
+                return true;
+            }
+
             return false;
         });
 
         helper.bars.registerHelper('names_in_package', function(in_package) {
             // console.log('looking for names in ' + in_package);
             var res = [];
-            for(index in doc.names) {
-                var _name = doc.names[index];
-                if(_name.indexOf(in_package) != -1) {
-                    var _without_package = _name.replace(in_package+'.','');
-                    if(_without_package.indexOf('.') == -1) {
-                        res.push(_name);
+
+            if(in_package == '_empty_') {
+                if(config.api_classes && config.api_classes.length) {
+                    var allowed = config.api_classes;
+                    var p = doc.packages._empty_;
+                    res =  [].concat(p.typedefs)
+                             .concat(p.classes)
+                             .concat(p.enums)
+                             .concat(p.abstracts)
+
+
+                    var _final = [];
+                    res.map(function(t){
+                        // console.log('check ', t, allowed);
+                        if(allowed.indexOf(t) != -1 && _final.indexOf(t) == -1) {
+                            _final.push(t);
+                        }
+                    });
+                    res = _final;
+                } //if classes
+            } else {
+                for(index in doc.names) {
+                    var _name = doc.names[index];
+                    if(_name.indexOf(in_package) != -1) {
+                        var _without_package = _name.replace(in_package+'.','');
+                        if(_without_package.indexOf('.') == -1) {
+                            res.push(_name);
+                        }
                     }
                 }
             }

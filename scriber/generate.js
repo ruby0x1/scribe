@@ -15,7 +15,8 @@ var marked      = require('marked'),
     var _marked_options = {
         gfm: true,
         highlight: function (code, _lang, callback) {
-            callback( null, hljs.highlight('haxe', code).value );
+            _lang = _lang || 'haxe';
+            callback( null, hljs.highlight(_lang, code).value );
         },
         tables: true,
         breaks: false,

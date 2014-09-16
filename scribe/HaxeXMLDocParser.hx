@@ -111,6 +111,11 @@ class HaxeXMLDocParser {
 
     static function post_parse(config:Dynamic, platform:String ) {
 
+            //merge inherited fields into child fields
+        for(_class in result.classes) {
+            inherit_fields(_class, config);
+        }
+
         for(_typedef in result.typedefs) {
             result.names.push(_typedef.path);
         }
@@ -486,6 +491,9 @@ class HaxeXMLDocParser {
                     name : _field.name,
                     type : parse_ctype(_field.type),
 
+                    inherited : false,
+                    inherit_source : null,
+
                     line : _field.line,
                     meta : _field.meta,
                     params : _field.params,
@@ -523,6 +531,9 @@ class HaxeXMLDocParser {
                         doc : _static.doc,
                         name : _static.name,
                         type : parse_ctype(_static.type),
+
+                        inherited : false,
+                        inherit_source : null,
 
                         line : _static.line,
                         meta : _static.meta,
@@ -566,6 +577,9 @@ class HaxeXMLDocParser {
                     name : _field.name,
                     type : parse_ctype(_field.type),
 
+                    inherited : false,
+                    inherit_source : null,
+
                     line : _field.line,
                     meta : _field.meta,
                     params : _field.params,
@@ -599,6 +613,9 @@ class HaxeXMLDocParser {
                         doc : _static.doc,
                         name : _static.name,
                         type : parse_ctype(_static.type),
+
+                        inherited : false,
+                        inherit_source : null,
 
                         line : _static.line,
                         meta : _static.meta,
@@ -646,6 +663,9 @@ class HaxeXMLDocParser {
                     doc : _field.doc,
                     name : _field.name,
                     type : parse_ctype(_field.type),
+
+                    inherited : false,
+                    inherit_source : null,
 
                     line : _field.line,
                     meta : _field.meta,
@@ -818,6 +838,131 @@ class HaxeXMLDocParser {
 
     } //parse_cdynamic
 
+
+    static function inherit_fields(_class:ClassDoc, config:Dynamic) {
+
+        if(_class.superClass == null) return;
+
+        var _parent_type = _class.superClass.path;
+            //obtain its info
+        var _parent = result.classes.get(_parent_type);
+
+            //classes from the std lib and
+            //excluded packages don't exist here
+            //so we skip them entirely
+        if(_parent == null) {
+            return;
+        }
+
+            //now, for each method, member and property
+            //we want to selectively merge things down into
+            //this class, if the parent has a method this
+            //class does not, we push it in here, and flag it inherited.
+            //if this class has it, we just flagged it as inherited and set the source.
+            //This happens recursively, so that parents at the top tier are set as the source
+        if(_parent.superClass != null) {
+
+                //for each method
+            for(_method in _parent.methods) {
+                    //if exists in the child, flag it as inherited
+                var _in_child = Lambda.exists(_class.methods, function(m){
+                    return m.name == _method.name;
+                });
+
+                if( _in_child ) {
+                    Lambda.filter(_class.methods, function(m){
+                        if(m.name == _method.name) {
+                            m.inherited = true;
+                            m.inherit_source = _parent.path;
+                            return true;
+                        }
+                        return false;
+                    });
+                } else {
+                        //if it doesn't exist in the child, we need to add it
+                    var _cm = _clone_classfield(_method);
+                        _cm.inherited = true;
+                        _cm.inherit_source = _parent.path;
+                    _class.methods.push(_cm);
+                }
+            } //for each method
+
+                //for each members
+            for(_member in _parent.members) {
+                    //if exists in the child, flag it as inherited
+                var _in_child = Lambda.exists(_class.members, function(m){
+                    return m.name == _member.name;
+                });
+
+                if( _in_child ) {
+                    Lambda.filter(_class.members, function(m){
+                        if(m.name == _member.name) {
+                            m.inherited = true;
+                            m.inherit_source = _parent.path;
+                            return true;
+                        }
+                        return false;
+                    });
+                } else {
+                        //if it doesn't exist in the child, we need to add it
+                    var _cm = _clone_classfield(_member);
+                        _cm.inherited = true;
+                        _cm.inherit_source = _parent.path;
+                    _class.members.push(_cm);
+                }
+            } //for each member
+
+                //for each property
+            for(_property in _parent.properties) {
+                    //if exists in the child, flag it as inherited
+                var _in_child = Lambda.exists(_class.properties, function(m){
+                    return m.name == _property.name;
+                });
+
+                if( _in_child ) {
+                    Lambda.filter(_class.properties, function(m){
+                        if(m.name == _property.name) {
+                            m.inherited = true;
+                            m.inherit_source = _parent.path;
+                            return true;
+                        }
+                        return false;
+                    });
+                } else {
+                        //if it doesn't exist in the child, we need to add it
+                    var _cm = _clone_classfield(_property);
+                        _cm.inherited = true;
+                        _cm.inherit_source = _parent.path;
+                    _class.properties.push(_cm);
+                }
+            } //for each property
+
+        } else {
+            inherit_fields(_parent, config);
+        }
+
+    } //inherit_fields
+
+    static function _clone_classfield(_field:ClassFieldDoc) : ClassFieldDoc {
+        return {
+            isPublic : _field.isPublic,
+            isStatic : _field.isStatic,
+            isOverride : _field.isOverride,
+
+            inherited : _field.inherited,
+            inherit_source : _field.inherit_source,
+
+            doc : _field.doc,
+            type : _field.type,
+            params : _field.params,
+            set : _field.set,
+            get : _field.get,
+            platforms : _field.platforms,
+            line : _field.line,
+            meta : _field.meta,
+            name : _field.name
+        };
+    } //_clone_method
 
 //Helpers
 

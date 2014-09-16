@@ -198,6 +198,9 @@ typedef ClassFieldDoc = {
     var name : String;
     var type : CTypeDoc;
 
+    var inherited : Bool;
+    var inherit_source : Null<String>;
+
     var line : Null<Int>;
     var meta : MetaData;
     var params : TypeParams;
