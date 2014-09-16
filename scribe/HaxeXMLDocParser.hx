@@ -109,6 +109,12 @@ class HaxeXMLDocParser {
         return 0;
     }
 
+    static function field_sort(a:ClassFieldDoc,b:ClassFieldDoc) {
+        if(a.name < b.name) return -1;
+        if(a.name > b.name) return 1;
+        return 0;
+    }
+
     static function post_parse(config:Dynamic, platform:String ) {
 
             //merge inherited fields into child fields
@@ -138,6 +144,12 @@ class HaxeXMLDocParser {
         }
 
         result.names.sort(dosort);
+
+        for(_class in result.classes) {
+            _class.members.sort(field_sort);
+            _class.methods.sort(field_sort);
+            _class.properties.sort(field_sort);
+        }
 
     } //post_parse
 
