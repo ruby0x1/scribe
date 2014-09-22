@@ -883,7 +883,7 @@ class HaxeXMLDocParser {
 
                 if( _in_child ) {
                     Lambda.filter(_class.methods, function(m){
-                        if(m.name == _method.name) {
+                        if(m.name == _method.name && m.name != 'new') {
                             m.inherited = true;
                             m.inherit_source = _parent.path;
                             return true;
