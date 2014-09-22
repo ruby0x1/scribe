@@ -11,7 +11,7 @@
     "graceful-fs" : "latest",
     "pygments" : "latest",
     "wrench" : "latest",
-    "jsonic" : "latest",
+    "jsonic" : "latest"
   },
   "engine": {
     "node": "0.10.x"

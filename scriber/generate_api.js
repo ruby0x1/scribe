@@ -10,6 +10,8 @@
 
     api.generate = function(config) {
 
+        api.config = config;
+
         if(!config.api_input) {
             return;
         }
@@ -37,11 +39,31 @@
         return _items[1] || '';
     }
 
-    api._get_type_link = function(config, _t) {
+    api._get_haxe_link = function(config, _t) {
 
-        if(!config.api_packages) {
-            return '';
+            //get the type root
+        var tr = api._get_package_root(_t);
+            //if this is a type params type, split that out
+        if(tr.indexOf('<') != -1) {
+            tr = tr.substr(0, tr.indexOf('<'));
         }
+
+        //check if its in the haxe type list
+        if(haxe_types.indexOf(tr) != -1) {
+            return haxe_link + tr + '.html';
+        }
+
+        if(tr == 'haxe') {
+            var _p = _t.split('->');
+            var _l = _p[0].replace(/\./gi,'/');
+            return haxe_link + _l + '.html';
+        }
+
+        return '#';
+
+    } //_get_haxe_link
+
+    api._get_type_link = function(config, _t, _root) {
 
             //get the type root
         var tr = api._get_package_root(_t);
@@ -52,39 +74,41 @@
 
             //if found in the list of acceptable packages,
             //we return that type value
-        if( config.api_packages.indexOf(tr) != -1) {
-            return '#'+_t;
+        if(config.api_packages) {
+            if( config.api_packages.indexOf(tr) != -1) {
+                var _p = _t.replace(/\./gi, '/') + '.html';
+                _root = _root || '';
+                return path.join(_root,config.api_out_md_path, _p);
+            } else {
+                return api._get_haxe_link(config, _t);
+            }
         } else {
-                //check if its in the haxe type list
-            if(haxe_types.indexOf(tr) != -1) {
-                return haxe_link + tr + '.html';
-            }
-
-            if(tr == 'haxe') {
-                var _p = _t.split('->');
-                var _l = _p[0].replace(/\./gi,'/');
-                return haxe_link + _l + '.html';
-            }
+            return api._get_haxe_link(config, _t);
         }
 
-        return '';
+        return '#';
 
     } //_get_type_link
 
-    api._add_type_links = function(config, t) {
+        //fetches a snippet if any from
+    api._get_example_code = function(config, _type, _field) {
 
-        var _tl = api._get_type_link(config, t.name);
-
-        if(t.params && t.params.length) {
-            for(_k in t.params) {
-                api._add_type_links(config, t.params[_k]);
-            }
+        if(!config.api_example_file) {
+            return;
         }
 
-        if(_tl) {
-            t.type_link = _tl;
+        var _type_full = _type + '.' + _field;
+        var reg = '^(>[ ]{1}'+ _type_full +')$(?:\\s*)(```[\\s\\S]+?```)';
+        var regex = new RegExp(reg, 'gim');
+
+        if(!api.example_code_file) {
+            api.example_code_file = helper.read_file(config.api_example_file);
         }
 
+        var match = regex.exec(api.example_code_file);
+        if(match) {
+            return match[2];
+        }
     }
 
     api.sort = function(arr, key ){
@@ -135,6 +159,16 @@
         helper.bars.registerHelper('type_path', function(data) {
             if(!data) return data;
             return data.replace(/\./gi, '/');
+        });
+
+        helper.bars.registerHelper('type_link', function(data, root) {
+            if(!data) return '#';
+            return api._get_type_link(api.config, data, root);
+        });
+
+        helper.bars.registerHelper('example_code', function(_type, _field) {
+            if(!_type) return '';
+            return api._get_example_code(api.config, _type, _field);
         });
 
         helper.bars.registerHelper('without_package', function(data) {
@@ -281,6 +315,8 @@
 
         if(doc) {
 
+                api.doc = doc;
+
                 //first, we want to populate the list of packages with empty objects to
                 //store the types inside of, so they can be iterated on the templates
 
@@ -381,7 +417,7 @@
 
         var _api_page_template = helper.read_file( config.template_path + config.api_template );
 
-        var _page_context = {  item : _type  };
+        var _page_context = {  doc:api.doc, item : _type  };
 
             //write out a single file per class, into it's package folder
         var packages = _type.path.split('.');
