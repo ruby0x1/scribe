@@ -8,63 +8,14 @@
 
 [View the haxe documentation generator docs](http://haxe.org/manual/documentation#writing-a-custom-generator).
 
-This output can be used for many things, but the output format is rather dense and confusing to parse.   
+This output can be used for many things, but the output format is rather dense difficult to parse in anything other than haxe itself.   
 
 ---
 
-scribe steps in between you and the xml file - and hosts a `HaxeDoc` class, which lists all the class names and each class definition (including `properties`, `members`, `methods` and any unknown elements that it finds).
+scribe steps in between you and the xml file - and hosts a `HaxeDoc` class, which lists all the class names and each class definition (including `properties`, `members`, `methods` and so on).
 
 With these elements, you can parse and export them to any language you wish, or implement the class as an API **WIP** embedded in your own library/project.
 
----
-###Example input 
-
-	from scribe.json. allowed_packages can be :
-		-a comma delimeted string "package,package2"
-		-an array of strings ["package", "package2"]
-		-a single class (see below for example)
-		-leave the allowed_packages flag out, 
-		to parse every class in the input xml
-
-	{ 
-		"input":"docs.xml", 
-		"output":"docs.json", 
-		"allowed_packages":"luxe.utils.GeometryUtils" 
-	}
-
-###Example output
----
-See example_output.json for an example class output from the current version.
-
-###Usage
----
-Note the library is WIP (see roadmap) but is usable already.
-
-    usage : 
-      scribe <options>
-
-    options list :
-      version, generate, display, input, config 
-
-    options :
-
-      -version
-          displays the version number
-
-      -generate <optional output file>
-          generate an output file, specified in config.output or 
-          specified as an optional output file argument.
-
-      -display
-          if display is set and generate is set, output will be 
-          printed to stdout instead of saved to the file.
-
-      -input haxedoc.xml
-          generate documentation from this file (config.input), if the file is a special value of "scribe.types.xml" in config or here, the project will attempt to make use of the lime_project config or argument in order to generate the "scribe.types.xml" file directly from the source lime project xml file.
-
-      -config config.json
-          when run without this flag, scribe will look for a scribe.json in the same folder.
-      
 
 ---
 ###Roadmap
@@ -76,6 +27,12 @@ Note the library is WIP (see roadmap) but is usable already.
 
 ---
 ###History
+
+**0.9.1** 
+
+- major rewrite to use haxe xml parser directly
+- changes export json structure but includes more precise mappings
+- many scriber fixes and additions due to new format
 
 **0.9.0** 
 
