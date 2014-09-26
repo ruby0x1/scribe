@@ -10,7 +10,13 @@
 
     api.generate = function(config) {
 
-            helper.log('- parsing json api description');
+        api.config = config;
+
+        if(!config.api_input) {
+            return;
+        }
+
+        helper.log('- parsing json api description');
 
         api.generate_md_files( config );
 
@@ -33,11 +39,7 @@
         return _items[1] || '';
     }
 
-    api._get_type_link = function(config, _t) {
-        
-        if(!config.api_packages) {
-            return '';
-        }
+    api._get_haxe_link = function(config, _t) {
 
             //get the type root
         var tr = api._get_package_root(_t);
@@ -46,66 +48,182 @@
             tr = tr.substr(0, tr.indexOf('<'));
         }
 
-            //if found in the list of acceptable packages, 
-            //we return that type value
-        if( config.api_packages.indexOf(tr) != -1) {
-            return '#'+_t;
-        } else {
-                //check if its in the haxe type list
-            if(haxe_types.indexOf(tr) != -1) {
-                return haxe_link + tr + '.html';
-            }
-
-            if(tr == 'haxe') {
-                var _p = _t.split('->');
-                var _l = _p[0].replace(/\./gi,'/');
-                return haxe_link + _l + '.html';
-            }
+        //check if its in the haxe type list
+        if(haxe_types.indexOf(tr) != -1) {
+            return haxe_link + tr + '.html';
         }
 
-        return '';
+        if(tr == 'haxe') {
+            var _p = _t.split('->');
+            var _l = _p[0].replace(/\./gi,'/');
+            return haxe_link + _l + '.html';
+        }
+
+        return '#';
+
+    } //_get_haxe_link
+
+    api._get_type_link = function(config, _t, _root) {
+
+            //get the type root
+        var tr = api._get_package_root(_t);
+            //if this is a type params type, split that out
+        if(tr.indexOf('<') != -1) {
+            tr = tr.substr(0, tr.indexOf('<'));
+        }
+
+            //if found in the list of acceptable packages,
+            //we return that type value
+        if(config.api_packages) {
+            if( config.api_packages.indexOf(tr) != -1) {
+                var _p = _t.replace(/\./gi, '/') + '.html';
+                _root = _root || '';
+                return path.join(_root,config.api_out_md_path, _p);
+            } else {
+                return api._get_haxe_link(config, _t);
+            }
+        } else {
+            return api._get_haxe_link(config, _t);
+        }
+
+        return '#';
 
     } //_get_type_link
 
-    api._add_type_links = function(config, t) {
+        //fetches a snippet if any from
+    api._get_example_code = function(config, _type, _field) {
 
-        var _tl = api._get_type_link(config, t.name);
-
-        if(t.params && t.params.length) {
-            for(_k in t.params) {
-                api._add_type_links(config, t.params[_k]);
-            }
+        if(!config.api_example_file) {
+            return;
         }
 
-        if(_tl) {
-            t.type_link = _tl;
+        var _type_full = _type + '.' + _field;
+        var reg = '^(>[ ]{1}'+ _type_full +')$(?:\\s*)(```[\\s\\S]+?```)';
+        var regex = new RegExp(reg, 'gim');
+
+        if(!api.example_code_file) {
+            api.example_code_file = helper.read_file(config.api_example_file);
         }
-        
+
+        var match = regex.exec(api.example_code_file);
+        if(match) {
+            return match[2];
+        }
+    }
+
+    api.sort = function(arr, key ){
+        arr.sort(function(a, b) {
+            a = a[key]; b= b[key];
+            if(a < b) return -1;
+            if(a >= b) return 1;
+            return 0;
+        });
+
+        return arr;
     }
 
     api.generate_md_files = function( config ) {
 
+        helper.bars.registerHelper('json', function(context) {
+            return JSON.stringify(context,null,2);
+        });
+
+        helper.bars.registerHelper('if', function (v1, op_opt, v2, options) {
+
+            if(options === void 0) {
+                if(v2 === void 0) {
+                    return v1 ? op_opt.fn(this) : op_opt.inverse(this);
+                }
+            }
+
+            var _true = false;
+            switch (op_opt) {
+                case '==':  _true = v1 == v2;   break;
+                case '===': _true = v1 === v2;  break;
+                case '!==': _true = v1 !== v2;  break;
+                case '<':   _true = v1 < v2;    break;
+                case '<=':  _true = v1 <= v2;   break;
+                case '>':   _true = v1 > v2;    break;
+                case '>=':  _true = v1 >= v2;   break;
+                case '||':  _true = v1 || v2;   break;
+                case '&&':  _true = v1 && v2;   break;
+            }
+            return _true ? options.fn(this) : options.inverse(this);
+        });
+
         helper.bars.registerHelper('escape_markdown', function(data) {
+            if(!data) return data;
             return data.replace(/_/gi, '\\_');
         });
 
         helper.bars.registerHelper('type_path', function(data) {
+            if(!data) return data;
             return data.replace(/\./gi, '/');
         });
- 
-        // helper.bars.registerHelper('newlines', function(data) {
-        //     return data.replace(/\./gi, '/');
-        // });
- 
-        helper.bars.registerHelper('is_visible', function(obj, options) {
 
-                //hide if private
-            var show = obj.ispublic;
-                //hide if @:noCompletion
-            if(obj.meta["@:noCompletion"]) {
+        helper.bars.registerHelper('type_link', function(data, root) {
+            if(!data) return '#';
+            return api._get_type_link(api.config, data, root);
+        });
+
+        helper.bars.registerHelper('example_code', function(_type, _field) {
+            if(!_type) return '';
+            return api._get_example_code(api.config, _type, _field);
+        });
+
+        helper.bars.registerHelper('without_package', function(data) {
+            if(!data) return data;
+            return data.split('.').pop();
+        });
+
+
+        var _api_index_template = helper.read_file( config.template_path + config.api_index_template );
+        var _api_partials = {};
+        var doc = helper.json( config.api_source_json );
+
+        helper.bars.registerHelper('member_visible', function(type, section, name, options) {
+
+            var show = false;
+            var _type_info = api.type_get_info(config, doc, type);
+            var _type_info = _type_info[section];
+
+            for(index in _type_info) {
+                var item = _type_info[index];
+                if(item.name == name) {
+                    _type_info = item;
+                    break;
+                }
+            }
+
+            var show = _type_info.isPrivate != true;
+
+
+            if(!_type_info.isPublic) {
                 show = false;
             }
 
+            if(api.type_has_meta(config, doc, _type_info, ':noCompletion')){
+                show = false;
+            }
+
+                //run the block only if not hidden
+            return show;
+
+        }); //member_visible
+
+        helper.bars.registerHelper('name_visible', function(name, options) {
+
+            var _type_info = api.type_get_info(config, doc, name);
+
+            var show = _type_info.isPrivate != true;
+
+            if(_type_info.isPublic == false) {
+                show = false;
+            }
+
+            if(api.type_has_meta(config, doc, _type_info, ':noCompletion')){
+                show = false;
+            }
                 //run the block only if not hidden
             if(show) {
                 return options.fn(this);
@@ -115,9 +233,76 @@
 
         });
 
-        var _api_index_template = helper.read_file( config.template_path + config.api_index_template );
-        var _api_partials = {};
-        var doc = helper.json( config.api_source_json );
+        helper.bars.registerHelper('get_type', function(object, name) {
+            return doc[object][name];
+        });
+
+        helper.bars.registerHelper('find_type', function(name) {
+            return  doc.classes[name] ||
+                    doc.typedefs[name] ||
+                    doc.abstracts[name] ||
+                    doc.enums[name] ||
+                    doc.packages[name];
+        });
+
+        helper.bars.registerHelper('hidden_package', function(name) {
+            if(!name) return true;
+
+            if(config.api_packages_ignore && config.api_packages_ignore.length) {
+                if(config.api_packages_ignore.indexOf(name) != -1) {
+                    return true;
+                }
+            }
+
+            var _p = doc.packages[name];
+
+            if(!_p) {
+                return true;
+            }
+
+            if(_p.isPrivate) {
+                return true;
+            }
+
+            return false;
+        });
+
+        helper.bars.registerHelper('names_in_package', function(in_package) {
+            // console.log('looking for names in ' + in_package);
+            var res = [];
+
+            if(in_package == '_empty_') {
+                if(config.api_classes && config.api_classes.length) {
+                    var allowed = config.api_classes;
+                    var p = doc.packages._empty_;
+                    res =  [].concat(p.typedefs)
+                             .concat(p.classes)
+                             .concat(p.enums)
+                             .concat(p.abstracts)
+
+
+                    var _final = [];
+                    res.map(function(t){
+                        // console.log('check ', t, allowed);
+                        if(allowed.indexOf(t) != -1 && _final.indexOf(t) == -1) {
+                            _final.push(t);
+                        }
+                    });
+                    res = _final;
+                } //if classes
+            } else {
+                for(index in doc.names) {
+                    var _name = doc.names[index];
+                    if(_name.indexOf(in_package) != -1) {
+                        var _without_package = _name.replace(in_package+'.','');
+                        if(_without_package.indexOf('.') == -1) {
+                            res.push(_name);
+                        }
+                    }
+                }
+            }
+            return res;
+        });
 
         var _partial_list = config.api_partials || [];
         for(_i in _partial_list) {
@@ -126,119 +311,87 @@
             _api_partials[p.name] = p_templ;
         }
 
-            //This is the list of sorted packages, by {root}.{sub} basically.
-            //this is an assumption that may give way later.
-        var _package_list = [];
-        var _package_items = {};
+        var _package_list = {};
 
         if(doc) {
 
-            var _type_count = doc.names.length;
-            var _blacklist = config.api_exclude || [];
+                api.doc = doc;
 
-            for(var i = 0; i < _type_count; ++i) {
+                //first, we want to populate the list of packages with empty objects to
+                //store the types inside of, so they can be iterated on the templates
 
-                var _type_name = doc.names[i];
-                var _type_info = doc.types[_type_name];
+            var _name_count = doc.names.length;
 
-                if(!_type_name || !_type_info) {
-                    continue;
-                }
+            for(var i = 0; i < _name_count; ++i) {
+                var _package = doc.names[i];
+                var _paths = _package.split('.');
+                    //remove the type
+                    _paths.pop();
 
-                var _root = api._get_package_root(_type_info.name);
-                var _sub = api._get_package_sub(_type_info.name);
-                var _full = _type_info.name;
-
-                var _package_parent = _root + ( _sub ? ('.'+_sub) : '' );
-
-                var _skip = false;
-
-                if(_blacklist.length) {
-                    for(k = 0; k < _blacklist.length; ++k) {
-                        if(_full.indexOf(_blacklist[k]) != -1) {
-                            _skip = true;
-                        }
+                    //for each package depth, see it it exists and
+                    //if not add it to the object
+                var _current = _package_list;
+                var _current_name = '';
+                for(index in _paths) {
+                    var _path = _paths[index];
+                    _current_name += (index>0 ? '.' : '') + _path;
+                    if(!_current[_path]) {
+                        _current[_path] = { root:_current_name };
                     }
+
+                    _current = _current[_path];
                 }
+            } //each name
 
-                if(_skip) {
-                    continue;
-                }
+            // console.log(JSON.stringify(_package_list,null,4));
+            for(index in doc.packages) {
+                doc.packages[index].packages = api.sort(doc.packages[index].packages, 'full');
+            }
 
-                    //if this package isn't yet added to the list,
-                    //we add it and fill it with the name and blank list
-                if(!_package_items[_package_parent]) {
-                        //new list
-                    _package_items[_package_parent] = [];
-                        //store it in the root list
-                    _package_list.push({ 
-                        name:_package_parent, 
-                        items:_package_items[_package_parent]
-                    });
-                }
+            api._type_list = [];
 
+                //now for each sub type, we want to push it into the package
+            for(i in doc.classes) {
 
-                if(!_type_info.meta['@:noCompletion'] && _type_info.ispublic) {
+                var _class = doc.classes[i];
+                api._push_type(config, doc, _class, _package_list);
 
-                        //a short name removing the root+sub package
-                    _type_info.name_short = _type_info.name.replace(_package_parent+'.','');
+            } //each classes
 
-                        //we make a type link for each item that has one, provided it's from our package
-                    if(_type_info.type == 'class' || _type_info.type == 'typedef') {
-                        
-                        for(_m in _type_info.members) {
+            for(i in doc.typedefs) {
 
-                            var t = _type_info.members[_m];
-                            api._add_type_links(config, t.type);
+                var _typedef = doc.typedefs[i];
+                api._push_type(config, doc, _typedef, _package_list);
 
-                        } //for each member
+            } //each typedefs
 
-                        if(_type_info.type == 'class') {
-                            for(_m in _type_info.methods) {
+            for(i in doc.enums) {
 
-                                var _method = _type_info.methods[_m];
-                                    //add links for method args
-                                for(_a in _method.args) {
-                                    var a = _method.args[_a];
-                                    api._add_type_links(config, a.type);
-                                }
-                                    //add links for return type
-                                api._add_type_links(config, _method.return_type);
+                var _typedef = doc.enums[i];
+                api._push_type(config, doc, _typedef, _package_list);
 
-                            } //for each method
-                        } //classes only have methods
-                        
-                    } //if typedef/class
+            } //each enums
 
+            for(i in doc.abstracts) {
 
-                        //push this class into the list 
-                    _package_items[_package_parent].push( _type_info );
-                }
+                var _typedef = doc.abstracts[i];
+                api._push_type(config, doc, _typedef, _package_list);
 
-            } //for all classes
+            } //each abstracts
 
-                //sort the package list items by alphabeticalness
-            for(k = 0; k < _package_list.length; ++k) {
-                _package_list[k].items.sort(function(a,b){
-                    if(a.name < b.name) return -1;
-                    if(a.name >= b.name) return 1;
-                    return 0;
-                });
-
-                for(j in _package_list[k].items) {
-                    api._generate_md_for_type(config, _package_list[k].items[j], _api_partials);
-                }                
+            for(k = 0; k < api._type_list.length; ++k) {
+                var _t = api._type_list[k];
+                api._generate_md_for_type(config, _t, _api_partials);
             }
 
 
                 //work out the end file for the index itself
             var _out_dest = config.api_out_md_path + config.api_index_out;
             var _rel_test = _out_dest.replace('.md','.html');
-            var _index_context = { 
-                package_list : _package_list,
-                api_types : doc.types, 
-                api_list : doc.names, 
-                rel_path : helper.get_rel_path_count(_rel_test) 
+            var _index_context = {
+                packages : _package_list,
+                doc : doc,
+                rel_path : helper.get_rel_path_count(_rel_test)
             };
 
                 //make sure the api folder exists
@@ -247,10 +400,10 @@
                 //template the index file with the list
             var _template_out = helper.render( _api_index_template, _index_context, _api_partials );
                 //write the correct file to the correct location
-            _out_dest = config.md_path + config.api_out_md_path + config.api_index_out;        
+            _out_dest = config.md_path + config.api_out_md_path + config.api_index_out;
                 //write out to the destination
             helper.write_file( _out_dest , _template_out );
-                //debug
+
             helper.log("\t - wrote api index file " + _out_dest);
 
             helper.log("- generated api files complete");
@@ -264,10 +417,10 @@
 
         var _api_page_template = helper.read_file( config.template_path + config.api_template );
 
-        var _page_context = {  item : _type  };
+        var _page_context = {  doc:api.doc, item : _type  };
 
             //write out a single file per class, into it's package folder
-        var packages = _type.name.split('.');
+        var packages = _type.path.split('.');
             //remove the class name from the end
         var class_name = packages.pop();
             //find the output file name
@@ -277,7 +430,7 @@
             //the end resulting file
         var _api_file_dest = package_path + class_name + '.md';
             //the relative path from the destination for calculating the rel_path helper
-        var _api_rel_dest = _type.name.split('.').join('/') + '/' + class_name + '.html';
+        var _api_rel_dest = _type.path.split('.').join('/') + '/' + class_name + '.html';
             //work out the rel path helper
         _page_context.rel_path = helper.get_rel_path_count(_api_rel_dest);
             //complete the generated template md
@@ -289,7 +442,7 @@
     }
 
     // var _api_replacement = function( _content ) {
-        
+
     //     var _replacements = config.replacements;
 
     //     var _count = _replacements.length;
@@ -307,6 +460,65 @@
     //     return _output;
 
     // } //_api_replacement
+
+    api.type_has_meta = function(config, doc, type, meta) {
+        for(index in type.meta) {
+            var _meta = type.meta[index];
+            if(_meta.name == meta) {
+                return _meta;
+            }
+        }
+    }
+
+    api.type_get_info = function(config, doc, name) {
+        return doc.classes[name] ||
+               doc.typedefs[name] ||
+               doc.enums[name] ||
+               doc.abstracts[name];
+    }
+
+    api._is_blacklisted = function(config) {
+
+        var _blacklist = config.api_exclude || [];
+        var _skip = false;
+
+        if(_blacklist.length) {
+            for(k = 0; k < _blacklist.length; ++k) {
+                if(_full.indexOf(_blacklist[k]) != -1) {
+                    _skip = true;
+                }
+            }
+        }
+
+        return _skip;
+
+    } //_is_blacklisted
+
+    api._push_type = function(config, doc, _typeitem, _package_list) {
+
+        var _full_path = _typeitem.path;
+        var _paths = _full_path.split('.');
+        var _type = _paths.pop();
+
+        if(api._is_blacklisted(_full_path)) {
+            return;
+        }
+
+        var _package = _package_list;
+            //hunt down the one we want
+        for(index in _paths) {
+            _package = _package[_paths[index]];
+        }
+
+            //now we store the class definition in here
+            //under the type name
+        // console.log(_type);
+        // console.log(_full_path);
+
+        _package[_type] = _typeitem;
+        api._type_list.push( _typeitem );
+
+    } //_push_type
 
 
     module.exports = api;

@@ -15,7 +15,8 @@ var marked      = require('marked'),
     var _marked_options = {
         gfm: true,
         highlight: function (code, _lang, callback) {
-            callback( null, hljs.highlight('haxe', code).value );
+            _lang = _lang || 'haxe';
+            callback( null, hljs.highlight(_lang, code).value );
         },
         tables: true,
         breaks: false,
@@ -39,7 +40,7 @@ var marked      = require('marked'),
 
         for(var i = 0; i < _count; i++) {
 
-            var _item = _replacements[i];            
+            var _item = _replacements[i];
 
             var _replace = new RegExp( "{" + _item.key + "}", 'g');
 
@@ -73,7 +74,7 @@ var marked      = require('marked'),
         var _file_content = _md_files[ _path ];
 
         _file_content = do_replacements( config, _file_content );
-        
+
         marked( _file_content, _marked_options, function(err, _parsed_markdown) {
 
             helper.verbose('\t - md > html ' + _path);
@@ -119,7 +120,7 @@ var marked      = require('marked'),
             //append the destination
         _path = path.join(config.output_path, _path);
 
-            //work out where the folders lie        
+            //work out where the folders lie
         var file_path = path.dirname(_path);
             //debugging
         helper.verbose('\t - html > file ' + _path + ' / ' + file_path);
@@ -141,7 +142,7 @@ var marked      = require('marked'),
                 //remove processed item
             _the_list.shift();
                 //keep reading
-            process.nextTick(function(){
+            setImmediate(function(){
                 do_write( config, _the_list, _done );
             });
 
@@ -159,11 +160,11 @@ var marked      = require('marked'),
 
                 //do the writing
             _generate_html(config, _path, function(){
-                
+
                     //remove processed item
                 _the_list.shift();
 
-                process.nextTick(function(){                    
+                setImmediate(function(){
                     do_md_to_html( config, _the_list, _done );
                 });
 
@@ -186,7 +187,7 @@ var marked      = require('marked'),
                 //remove processed item
             _the_list.shift();
                 //keep reading
-            process.nextTick(function(){
+            setImmediate(function(){
                 do_html_templating( config, _the_list, _done );
             });
 
@@ -197,8 +198,8 @@ var marked      = require('marked'),
     } //do_html_templating
 
 
-    var generate_docs = function( config, _done ) {        
-            
+    var generate_docs = function( config, _done ) {
+
         helper.verbose('  - fetch md files');
 
             //fetch list of md files
@@ -226,7 +227,7 @@ var marked      = require('marked'),
 
         helper.log('- scriber v1.0.0-alpha');
         helper.log('- fetching scriber.config.json');
-            
+
         //:todo: fetch this from a -config path too
     var config = require(path.resolve(helper.root, 'scriber.config.json'));
 
