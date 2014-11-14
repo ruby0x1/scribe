@@ -489,11 +489,13 @@ class HaxeXMLDocParser {
 
                 var get_rights = parse_rights(_field.get);
                 var set_rights = parse_rights(_field.set);
+                var _field_type = parse_ctype(_field.type);
 
-                if(get_rights != 'normal') {
+                if(get_rights == 'accessor' || set_rights == 'accessor') {
                     continue;
                 }
-                if(set_rights != 'normal') {
+
+                if(_field_type.type == 'CFunction') {
                     continue;
                 }
 
@@ -501,7 +503,7 @@ class HaxeXMLDocParser {
 
                     doc : _field.doc,
                     name : _field.name,
-                    type : parse_ctype(_field.type),
+                    type : _field_type,
 
                     inherited : false,
                     inherit_source : null,
@@ -530,11 +532,13 @@ class HaxeXMLDocParser {
 
                     var get_rights = parse_rights(_static.get);
                     var set_rights = parse_rights(_static.set);
+                    var _static_type = parse_ctype(_static.type);
 
-                    if(get_rights != 'normal') {
+                    if(get_rights == 'accessor' || set_rights == 'accessor') {
                         continue;
                     }
-                    if(set_rights != 'normal') {
+
+                    if(_static_type.type == 'CFunction') {
                         continue;
                     }
 
@@ -577,9 +581,9 @@ class HaxeXMLDocParser {
         if(fields.length > 0) {
             for(_field in fields) {
 
-                var set_rights = parse_rights(_field.set);
+                var _field_type = parse_ctype(_field.type);
 
-                if(set_rights != 'method') {
+                if(_field_type.type != 'CFunction') {
                     continue;
                 }
 
@@ -587,7 +591,7 @@ class HaxeXMLDocParser {
 
                     doc : _field.doc,
                     name : _field.name,
-                    type : parse_ctype(_field.type),
+                    type : _field_type,
 
                     inherited : false,
                     inherit_source : null,
@@ -598,7 +602,7 @@ class HaxeXMLDocParser {
                     platforms : Lambda.array(_field.platforms),
 
                     get : parse_rights(_field.get),
-                    set : set_rights,
+                    set : parse_rights(_field.set),
 
                     isPublic : _field.isPublic,
                     isOverride : _field.isOverride,
@@ -614,9 +618,9 @@ class HaxeXMLDocParser {
             if(statics.length > 0) {
                 for(_static in statics) {
 
-                    var set_rights = parse_rights(_static.set);
+                    var _static_type = parse_ctype(_static.type);
 
-                    if(set_rights != 'method') {
+                    if(_static_type.type != 'CFunction') {
                         continue;
                     }
 
@@ -624,7 +628,7 @@ class HaxeXMLDocParser {
 
                         doc : _static.doc,
                         name : _static.name,
-                        type : parse_ctype(_static.type),
+                        type : _static_type,
 
                         inherited : false,
                         inherit_source : null,
@@ -635,7 +639,7 @@ class HaxeXMLDocParser {
                         platforms : Lambda.array(_static.platforms),
 
                         get : parse_rights(_static.get),
-                        set : set_rights,
+                        set : parse_rights(_static.set),
 
                         isPublic : _static.isPublic,
                         isOverride : _static.isOverride,
@@ -661,12 +665,15 @@ class HaxeXMLDocParser {
 
                 var get_rights = parse_rights(_field.get);
                 var set_rights = parse_rights(_field.set);
+                var field_type = parse_ctype(_field.type);
 
-                if(set_rights == 'method') {
+                    //if it's a function, nope
+                if(field_type.type == 'CFunction') {
                     continue;
                 }
 
-                if(get_rights == 'normal' && set_rights == 'normal') {
+                    //if it's not an accessor its not a property
+                if(get_rights != 'accessor' && set_rights != 'accessor') {
                     continue;
                 }
 
@@ -674,7 +681,7 @@ class HaxeXMLDocParser {
 
                     doc : _field.doc,
                     name : _field.name,
-                    type : parse_ctype(_field.type),
+                    type : field_type,
 
                     inherited : false,
                     inherit_source : null,
@@ -714,6 +721,8 @@ class HaxeXMLDocParser {
                 return 'method';
             case Rights.RDynamic:
                 return 'dynamic';
+            case Rights.RInline:
+                return 'inline';
             case Rights.RCall( m ) :
                 return m;
             default:

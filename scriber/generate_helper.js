@@ -64,6 +64,10 @@ var path        = require('path'),
         
     } //copy_file
 
+    helper.mtime = function(_source) {
+        return fs.statSync( path.resolve(helper.root, _source) ).mtime.getTime();
+    }
+
     helper.read_file = function(_source) {
 
         return String(fs.readFileSync( path.resolve(helper.root, _source) ));
