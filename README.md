@@ -28,6 +28,11 @@ With these elements, you can parse and export them to any language you wish, or 
 ---
 ###History
 
+**0.9.2** 
+
+- fix bugs in method/property/member distinctions
+- [ ] add mtime caching for input md files to be skipped
+
 **0.9.1** 
 
 - major rewrite to use haxe xml parser directly
