@@ -1,17 +1,6 @@
 package scribe;
 
 import haxe.rtti.CType;
-import haxe.rtti.CType.Abstractdef;
-import haxe.rtti.CType.Classdef;
-import haxe.rtti.CType.ClassField;
-import haxe.rtti.CType.Enumdef;
-import haxe.rtti.CType.MetaData;
-import haxe.rtti.CType.PathParams;
-import haxe.rtti.CType.Platforms;
-import haxe.rtti.CType.Typedef;
-import haxe.rtti.CType.TypeParams;
-import haxe.rtti.CType.TypeRoot;
-import haxe.rtti.CType.TypeTree;
 
 typedef HaxeDoc = {
 

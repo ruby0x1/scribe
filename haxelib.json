@@ -1,0 +1,12 @@
+{
+    "name": "scribe",
+    "license": "MIT",
+    "url": "https://github.com/underscorediscovery/scribe",
+    "description": "scribe is a documentation xml to json converter and scriber converts this json to usable API documentation with a handlebars templating engine.",
+    "releasenote": "",
+    "version": "0.0.0",
+
+    "contributors": [ "underscorediscovery" ],
+    "tags": [ "docs" ],
+    "dependencies": { }
+}
