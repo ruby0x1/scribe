@@ -391,7 +391,7 @@ class Main {
         var system_args = Sys.args();
         var run_path = system_args.pop();
 
-        ArgParser.delimeter = '-';
+        ArgParser.delimiter = '-';
 
         var results = ArgParser.parse( system_args );
 
