@@ -96,6 +96,33 @@
 
     } //_get_type_link
 
+    api._get_source_link = function(config, _t) {
+
+        if(!config.api_source_url) return '#';
+
+            //get the type root
+        var tr = api._get_package_root(_t);
+            //if this is a type params type, split that out
+        if(tr.indexOf('<') != -1) {
+            tr = tr.substr(0, tr.indexOf('<'));
+        }
+
+        // luxe/Audio.hx
+
+            //if found in the list of acceptable packages,
+            //we return that type value
+        if(config.api_packages) {
+            if( config.api_packages.indexOf(tr) != -1) {
+                var _p = _t.replace(/\./gi, '/') + '.hx';
+                var _r = path.join(config.api_source_url, _p);
+                return _r;
+            }
+        }
+
+        return '#';
+
+    } //_get_source_link
+
         //fetches a snippet if any from
     api._get_example_code = function(config, _type, _field) {
 
@@ -170,6 +197,11 @@
         helper.bars.registerHelper('type_link', function(data, root) {
             if(!data) return '#';
             return api._get_type_link(api.config, data, root);
+        });
+
+        helper.bars.registerHelper('source_link', function(data) {
+            if(!data) return '#';
+            return api._get_source_link(api.config, data);
         });
 
         helper.bars.registerHelper('example_code', function(_type, _field) {
