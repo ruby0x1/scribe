@@ -4,10 +4,6 @@
     var helper   = require('./generate_helper'),
         path     = require('path');
 
-    var haxe_types = ['String', 'Float', 'Null', 'Void', 'Int', 'Bool', 'Dynamic', 'Array', 'Map' ];
-    var haxe_link = 'http://api.haxe.org/';
-
-
     api.generate = function(config) {
 
         api.config = config;
@@ -15,6 +11,9 @@
         if(!config.api_input) {
             return;
         }
+
+        config.api_links = config.api_links || {}
+        config.api_links["haxe_api"] = require('./haxe.api_links.json');
 
         helper.log('- parsing json api description');
 
@@ -39,7 +38,7 @@
         return _items[1] || '';
     }
 
-    api._get_haxe_link = function(config, _t) {
+    api._get_api_link = function(config, _t) {
 
             //get the type root
         var tr = api._get_package_root(_t);
@@ -48,20 +47,27 @@
             tr = tr.substr(0, tr.indexOf('<'));
         }
 
-        //check if its in the haxe type list
-        if(haxe_types.indexOf(tr) != -1) {
-            return haxe_link + tr + '.html';
-        }
+        var links = config.api_links;
+        for(name in links) {
 
-        if(tr == 'haxe') {
-            var _p = _t.split('->');
-            var _l = _p[0].replace(/\./gi,'/');
-            return haxe_link + _l + '.html';
-        }
+            var link = links[name];
+                //check each of the types, if any
+            if(link.types && link.types.indexOf(tr) != -1) {
+                return link.url + tr + link.suffix;
+            }
+        
+                //check each of the packages if any
+            if(link.packages && link.packages.indexOf(tr) != -1) {
+                var _p = _t.split('->');
+                var _l = _p[0].replace(/\./gi,'/');
+                return link.url + _l + link.suffix;
+            }
+
+        } //each link
 
         return '#';
 
-    } //_get_haxe_link
+    } //_get_api_link
 
     api._get_type_link = function(config, _t, _root) {
 
@@ -80,10 +86,10 @@
                 _root = _root || '';
                 return path.join(_root,config.api_out_md_path, _p);
             } else {
-                return api._get_haxe_link(config, _t);
+                return api._get_api_link(config, _t);
             }
         } else {
-            return api._get_haxe_link(config, _t);
+            return api._get_api_link(config, _t);
         }
 
         return '#';
